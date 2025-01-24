@@ -8,7 +8,7 @@ with open(path.join(this_directory, "README.md"), encoding="utf-8") as f:
     
 setup(
     name='captivate-ai-api',
-    version='0.1.1',
+    version='0.1.3',
     description="An API for Captivate conversation and state management",
     long_description=long_description,
     long_description_content_type="text/markdown",  # or "text/x-rst" if you're using reStructuredText
