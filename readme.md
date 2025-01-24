@@ -18,7 +18,11 @@ Captivate is developed by CaptivateChat to handle its API formats.This flexible 
 - Custom metadata manipulation
 - Conversation title management
 
+You can install through:
 
+```bash
+pip install captivate-ai-api
+```
 
 
 ## Captivate Payload
