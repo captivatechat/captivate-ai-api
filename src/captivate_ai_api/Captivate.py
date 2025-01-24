@@ -138,7 +138,7 @@ class ActionModel(BaseModel):
 
 
 class CaptivateResponseModel(BaseModel):
-    messages: List[
+    response: List[
         Union[
             TextMessageModel,
             FileModel,
@@ -148,7 +148,7 @@ class CaptivateResponseModel(BaseModel):
             HtmlMessageModel,
             BaseMessageModel,
         ]
-    ] = []  # Default to an empty list
+    ] = []  # List of responses Default to an empty list
     session_id: str  # Session ID to identify the conversation
     metadata: MetadataModel  # Updated metadata
     outgoing_action: Optional[List[ActionModel]] = None  # Optional actions to taken such as redirecting user to website
@@ -280,7 +280,7 @@ class Captivate(BaseModel):
 
     def set_response(
         self,
-        messages: List[
+        response: List[
             Union[
                 TextMessageModel,
                 FileModel,
@@ -303,8 +303,8 @@ class Captivate(BaseModel):
                 hasLivechat=self.hasLivechat,
             )
 
-        # Set the messages
-        self.response.messages = messages
+        # Set the response_messages
+        self.response.response = response
 
     def get_incoming_action(self) -> Optional[List[ActionModel]]:
         """

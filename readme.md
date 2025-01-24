@@ -85,7 +85,7 @@ async def handle_chat(data: CaptivateRequestModel):
         captivate.set_conversation_title('Lord of the rings')
 
         # Prepare messages
-        messages = [
+        response_messages = [
             TextMessageModel(text="Welcome to our platform!"),
             ButtonMessageModel(buttons={"title": "Learn More", "action": "navigate"}),
             TableMessageModel(table="<table><tr><th>Name</th><th>Age</th></tr><tr><td>Alice</td><td>30</td></tr></table>"),
@@ -101,7 +101,7 @@ async def handle_chat(data: CaptivateRequestModel):
         ]
         
         # Set the response messages
-        captivate.set_response(messages)
+        captivate.set_response(response_messages)
 
         # Outgoing actions Both 'payload' & 'data' works for backwards compatibliity. Moving forward it is recommended to use 'data'
         outgoing_actions = [
@@ -124,7 +124,7 @@ When you send the POST request to the `/chat` endpoint, the response will look a
 
 ```json
 {
-    "messages": [
+    "response": [
         {
             "type": "text",
             "text": "Welcome to our platform!"
@@ -361,7 +361,7 @@ has_livechat = captivate_instance.get_has_livechat()
 ### 14. `set_response`
 
 ```python
-def set_response(self, messages: List[Union[TextMessageModel, FileModel, ButtonMessageModel, TableMessageModel, CardMessageModel, HtmlMessageModel, BaseMessageModel]]) -> None:
+def set_response(self, response: List[Union[TextMessageModel, FileModel, ButtonMessageModel, TableMessageModel, CardMessageModel, HtmlMessageModel, BaseMessageModel]]) -> None:
 ```
 - **Description**: Sets the response messages in the `Captivate` instance.
 - **Example**: 
