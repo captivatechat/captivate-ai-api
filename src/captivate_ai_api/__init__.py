@@ -1,1 +1,1 @@
-from .Captivate import ActionModel, BaseMessageModel, Captivate, CardMessageModel, FileModel, HtmlMessageModel, TableMessageModel, TextMessageModel, ButtonMessageModel
+from .Captivate import ActionModel, Captivate, CardMessageModel, FileModel, HtmlMessageModel, TableMessageModel, TextMessageModel, ButtonMessageModel

@@ -97,7 +97,7 @@ async def handle_chat(data: CaptivateRequestModel):
             ),
             HtmlMessageModel(html="<h2>Today's Highlights</h2><ul><li>News Item 1</li><li>News Item 2</li></ul>"),
             FileModel(type="application/pdf", url="https://example.com/manual.pdf", filename="UserManual.pdf"),
-            BaseMessageModel(type="alert", RootModel={"priority": "high", "message": "System maintenance scheduled."})
+            {"type": "custom", "content": "This is a custom message."}
         ]
         
         # Set the response messages
@@ -361,7 +361,7 @@ has_livechat = captivate_instance.get_has_livechat()
 ### 14. `set_response`
 
 ```python
-def set_response(self, response: List[Union[TextMessageModel, FileModel, ButtonMessageModel, TableMessageModel, CardMessageModel, HtmlMessageModel, BaseMessageModel]]) -> None:
+def set_response(self, response: List[Union[TextMessageModel, FileModel, ButtonMessageModel, TableMessageModel, CardMessageModel, HtmlMessageModel, dict]]) -> None:
 ```
 - **Description**: Sets the response messages in the `Captivate` instance.
 - **Example**: 
@@ -378,7 +378,7 @@ captivate_instance.set_response([
                 ),
             HtmlMessageModel(html="<h2>Today's Highlights</h2><ul><li>News Item 1</li><li>News Item 2</li></ul>"),
             FileModel(type="application/pdf", url="https://example.com/manual.pdf", filename="UserManual.pdf"),
-            BaseMessageModel(type="alert", RootModel={"priority": "high", "message": "System maintenance scheduled."})
+            {"type": "custom", "content": "This is a custom message."}
             ])
 ```
 
@@ -417,6 +417,23 @@ def get_response(self) -> Optional[str]:
 response_json = captivate_instance.get_response()
 ```
 
+### 18. `get_response`
+
+```python
+async def async_send_message(self, environment: str = "dev") -> Dict[str, Any]:
+```
+- **Description**: The async_send_message method is an asynchronous function that sends the conversation data (including messages and actions) to the appropriate API endpoint, depending on the environment (dev or prod)
+- **Example**: 
+```python
+# Create an instance of Captivate
+captivate = Captivate(session_id="12345", hasLivechat=True, metadata=metadata)
+
+# Set a message and actions
+captivate.set_response([TextMessageModel(text="Hello, World!")])
+
+# Send the message to the API in 'dev' environment
+response = await captivate.async_send_message(environment="dev")
+```
 
 
 

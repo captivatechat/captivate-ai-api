@@ -1,19 +1,9 @@
+import httpx
 from pydantic import BaseModel, EmailStr, model_validator, Field, RootModel
 from typing import Optional, Dict, Any, List, Union
 
 
 # Predefined message types
-
-
-# Base message model for flexible custom content
-class BaseMessageModel(BaseModel):
-    type: str  # Type of the message (any)
-
-    # Using a dictionary to capture arbitrary properties directly alongside 'type'
-    # This allows any property that isn't predefined
-    RootModel: Dict[str, Any]
-
-
 class TextMessageModel(BaseModel):
     type: str = "text"
     text: str  # Text content
@@ -146,7 +136,7 @@ class CaptivateResponseModel(BaseModel):
             TableMessageModel,
             CardMessageModel,
             HtmlMessageModel,
-            BaseMessageModel,
+            dict,
         ]
     ] = []  # List of responses Default to an empty list
     session_id: str  # Session ID to identify the conversation
@@ -165,6 +155,10 @@ class Captivate(BaseModel):
     response: Optional[CaptivateResponseModel] = None
 
 
+    # API URLs as constants
+    DEV_URL: str = Field(default="https://channel.dev.captivat.io/api/channel/sendMessage", exclude=True)
+    PROD_URL: str = Field(default="https://channel.prod.captivat.io/api/channel/sendMessage", exclude=True)
+    
     # Prevent session_id and hasLivechat from being changed once set
     _session_id_set = False
     _hasLivechat_set = False
@@ -288,7 +282,7 @@ class Captivate(BaseModel):
                 TableMessageModel,
                 CardMessageModel,
                 HtmlMessageModel,
-                BaseMessageModel,
+                dict,
             ]
         ],
     ) -> None:
@@ -345,5 +339,64 @@ class Captivate(BaseModel):
         Returns the value of 'user_input' from the Captivate instance.
         """
         return self.user_input
+    
+    async def async_send_message(self, environment: str = "dev") -> Dict[str, Any]:
+        """
+        Asynchronously sends the CaptivateResponseModel to the API endpoint based on the environment.
+
+        Args:
+            environment (str): The environment to use ('dev' or 'prod'). Defaults to 'dev'.
+
+        Returns:
+            Dict[str, Any]: The response from the API.
+        """
+        if not self.response:
+            raise ValueError("Response is not set. Cannot send an empty response.")
+
+        # Determine the API URL based on the environment
+        if environment == "prod":
+            api_url = self.PROD_URL
+        else:
+            api_url = self.DEV_URL
+
+         # Extract `channel` from metadata
+        channel = self.get_channel()
+        if not channel:
+            raise ValueError("Channel information is missing in metadata.")
+        
+        # Convert the response message models into dictionaries
+        message_data = []
+    
+        # Iterate through response and serialize models or dicts accordingly
+        for message in self.response.response:
+            if isinstance(message, BaseModel):
+                # For Pydantic models, call .model_dump() to serialize
+                message_data.append(message.model_dump())
+            elif isinstance(message, dict):
+                # For dictionaries, serialize directly
+                message_data.append(message)
+                
+        action_data =  [msg.model_dump() for msg in (self.response.outgoing_action) or[]]
+
+        # Prepare the payload
+        payload = {
+            "idChat": self.session_id,
+            "channel": channel,
+            "message": {
+                "messages": message_data,
+                "actions": action_data
+            },
+
+        }
+        if not payload["message"]:
+            raise ValueError("Response data is missing and cannot be sent.")
+
+        # Perform the async POST request
+        async with httpx.AsyncClient() as client:
+            response = await client.post(api_url, json=payload)
+
+        # Raise an error if the request failed
+        response.raise_for_status()
+        return response
     
     
