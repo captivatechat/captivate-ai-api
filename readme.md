@@ -417,12 +417,12 @@ def get_response(self) -> Optional[str]:
 response_json = captivate_instance.get_response()
 ```
 
-### 18. `get_response`
+### 18. `async_send_message`
 
 ```python
 async def async_send_message(self, environment: str = "dev") -> Dict[str, Any]:
 ```
-- **Description**: The async_send_message method is an asynchronous function that sends the conversation data (including messages and actions) to the appropriate API endpoint, depending on the environment (dev or prod)
+- **Description**: The async_send_message method is an asynchronous function that sends the conversation data (including messages and actions) to the captivate async messsage API endpoint, depending on the environment (dev or prod)
 - **Example**: 
 ```python
 # Create an instance of Captivate
