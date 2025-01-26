@@ -378,19 +378,26 @@ class Captivate(BaseModel):
                 
         action_data =  [msg.model_dump() for msg in (self.response.outgoing_action) or[]]
 
-        # Prepare the payload
+        # Prepare the payload dynamically
+        message = {}
+
+        if message_data:
+            message["messages"] = message_data
+
+        if action_data:
+            message["actions"] = action_data
+
         payload = {
             "idChat": self.session_id,
             "channel": channel,
-            "message": {
-                "messages": message_data,
-                "actions": action_data
-            },
+            }
 
-        }
-        if not payload["message"]:
-            raise ValueError("Response data is missing and cannot be sent.")
+        if message:  # Only add the "message" key if it's not empty
+            payload["message"] = message
 
+
+        
+        print(payload)
         # Perform the async POST request
         async with httpx.AsyncClient() as client:
             response = await client.post(api_url, json=payload)

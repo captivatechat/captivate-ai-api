@@ -3,7 +3,7 @@ import asyncio
 
 async def main():
     data_action = {
-        "session_id": "lance_catcher_test_a6635008-18d1-4244-be6c-a00ab457e5a8",
+        "session_id": "lance_catcher_two_9ad53e00-5d4f-4646-9ac3-d0a52de1a93c",
         "endpoint": "action",
         "user_input": "tell me about EU regulations",
         "incoming_action": [
@@ -67,9 +67,9 @@ async def main():
             ActionModel(id="navigate", payload={"url": "https://example.com"}),
             ActionModel(id="submit", data={"form_id": "1234"})
         ]
-        captivate_instance.set_outgoing_action(outgoing_actions)
-        #print(captivate_instance.get_response())
+        #captivate_instance.set_outgoing_action(outgoing_actions)
         await captivate_instance.async_send_message(environment="dev") #dev or prod
+        #print(captivate_instance.get_response())
         #print("Captivate Model Instance:", captivate_instance.model_dump_json(indent=4))
     except Exception as e:
         print("Error:", e)
