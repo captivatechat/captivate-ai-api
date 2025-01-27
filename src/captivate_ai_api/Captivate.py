@@ -20,7 +20,7 @@ class TableMessageModel(BaseModel):
 
 
 class CardMessageModel(BaseModel):
-    type: str = "card"
+    type: str = "cards"
     text: str
     description: str
     image_url: str
@@ -30,6 +30,7 @@ class CardMessageModel(BaseModel):
 class HtmlMessageModel(BaseModel):
     type: str = "html"
     html: str  # HTML content
+
 
 
 class FileModel(BaseModel):
@@ -45,7 +46,12 @@ class FileModel(BaseModel):
             )
         return self
 
-
+class FileCollectionModel(BaseModel):
+    type: str = 'file'  # e.g., "file"
+    title: str  # e.g., "This is the image"
+    files: List[FileModel]  # List of files
+    
+    
 class UserModel(BaseModel):
     firstName: Optional[str] = None
     lastName: Optional[str] = None
@@ -131,7 +137,7 @@ class CaptivateResponseModel(BaseModel):
     response: List[
         Union[
             TextMessageModel,
-            FileModel,
+            FileCollectionModel,
             ButtonMessageModel,
             TableMessageModel,
             CardMessageModel,

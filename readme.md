@@ -87,7 +87,7 @@ async def handle_chat(data: CaptivateRequestModel):
         # Prepare messages
         response_messages = [
             TextMessageModel(text="Welcome to our platform!"),
-            ButtonMessageModel(buttons={"title": "Learn More", "action": "navigate"}),
+            ButtonMessageModel(buttons={"title": "Learn More", "options": [{"label":"Yes","value":"Yes"}]}),
             TableMessageModel(table="<table><tr><th>Name</th><th>Age</th></tr><tr><td>Alice</td><td>30</td></tr></table>"),
             CardMessageModel(
                 text="Special Offer",
@@ -96,7 +96,7 @@ async def handle_chat(data: CaptivateRequestModel):
                 link="https://example.com/deals"
             ),
             HtmlMessageModel(html="<h2>Today's Highlights</h2><ul><li>News Item 1</li><li>News Item 2</li></ul>"),
-            FileModel(type="application/pdf", url="https://example.com/manual.pdf", filename="UserManual.pdf"),
+            FileCollectionModel(title="See files below", files=[FileModel(type='application/pdf',url="https://example.com/manual.pdf", filename="UserManual.pdf")] ),
             {"type": "custom", "content": "This is a custom message."}
         ]
         
@@ -133,7 +133,10 @@ When you send the POST request to the `/chat` endpoint, the response will look a
             "type": "button",
             "buttons": {
                 "title": "Learn More",
-                "action": "navigate"
+                "options": {
+                    "label":"Yes",
+                    "value":"Yes"
+                }
             }
         },
         {
@@ -141,7 +144,7 @@ When you send the POST request to the `/chat` endpoint, the response will look a
             "table": "<table><tr><th>Name</th><th>Age</th></tr><tr><td>Alice</td><td>30</td></tr></table>"
         },
         {
-            "type": "card",
+            "type": "cards",
             "text": "Special Offer",
             "description": "Get 20% off your next purchase.",
             "image_url": "https://example.com/offer.png",
@@ -151,10 +154,14 @@ When you send the POST request to the `/chat` endpoint, the response will look a
             "type": "html",
             "html": "<h2>Today's Highlights</h2><ul><li>News Item 1</li><li>News Item 2</li></ul>"
         },
-        {
+        { 
+        "type":"files",
+        "title":"these are the files",
+        "files":[{
             "type": "application/pdf",
             "url": "https://example.com/manual.pdf",
             "filename": "UserManual.pdf"
+            }]
         },
         {
             "type": "alert",
@@ -361,7 +368,7 @@ has_livechat = captivate_instance.get_has_livechat()
 ### 14. `set_response`
 
 ```python
-def set_response(self, response: List[Union[TextMessageModel, FileModel, ButtonMessageModel, TableMessageModel, CardMessageModel, HtmlMessageModel, dict]]) -> None:
+def set_response(self, response: List[Union[TextMessageModel, FileCollectionModel, ButtonMessageModel, TableMessageModel, CardMessageModel, HtmlMessageModel, dict]]) -> None:
 ```
 - **Description**: Sets the response messages in the `Captivate` instance.
 - **Example**: 
@@ -377,7 +384,7 @@ captivate_instance.set_response([
                 link="https://example.com/deals"
                 ),
             HtmlMessageModel(html="<h2>Today's Highlights</h2><ul><li>News Item 1</li><li>News Item 2</li></ul>"),
-            FileModel(type="application/pdf", url="https://example.com/manual.pdf", filename="UserManual.pdf"),
+           FileCollectionModel(title="See files below", files=[FileModel(type='application/pdf',url="https://example.com/manual.pdf", filename="UserManual.pdf")] ),
             {"type": "custom", "content": "This is a custom message."}
             ])
 ```

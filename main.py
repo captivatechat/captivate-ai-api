@@ -1,9 +1,9 @@
-from src.captivate_ai_api.Captivate import ActionModel, Captivate, CardMessageModel, FileModel, HtmlMessageModel, TableMessageModel, TextMessageModel,ButtonMessageModel
+from src.captivate_ai_api.Captivate import ActionModel, Captivate, FileCollectionModel,CardMessageModel, FileModel, HtmlMessageModel, TableMessageModel, TextMessageModel,ButtonMessageModel
 import asyncio
 
 async def main():
     data_action = {
-        "session_id": "lance_catcher_two_9ad53e00-5d4f-4646-9ac3-d0a52de1a93c",
+        "session_id": "HFQ7EXH-SSAMNZJ-G85YG8R-TVQN46B - 67973c2d00f6ee0014b56c8a - 281d9eaf-c7b8-4471-b2bf-d8080a7541bb",
         "endpoint": "action",
         "user_input": "tell me about EU regulations",
         "incoming_action": [
@@ -19,7 +19,7 @@ async def main():
             "internal": {
                 "channelMetadata": {
                     "course_id":"abc",
-                    "channelMetadata": {"channel": "custom-channel", "channelData": {}},
+                    "channelMetadata": {"channel": "widget", "channelData": {}},
                     "user": {
                         "firstName": "Lance",
                         "lastName": "safa",
@@ -45,18 +45,18 @@ async def main():
         #print(captivate_instance.get_conversation_title())
         #print(captivate_instance.get_incoming_action())
         messages = [
-            TextMessageModel(text="Welcome to our platform!"),
-            ButtonMessageModel(buttons={"title": "Learn More", "action": "navigate"}),
-            TableMessageModel(table="<table><tr><th>Name</th><th>Age</th></tr><tr><td>Alice</td><td>30</td></tr></table>"),
-            CardMessageModel(
-                text="Special Offer",
-                description="Get 20% off your next purchase.",
-                image_url="https://example.com/offer.png",
-                link="https://example.com/deals"
-                ),
-            HtmlMessageModel(html="<h2>Today's Highlights</h2><ul><li>News Item 1</li><li>News Item 2</li></ul>"),
-            FileModel(type="application/pdf", url="https://example.com/manual.pdf", filename="UserManual.pdf"),
-            {"type": "custom", "content": "This is a custom message."}
+            #TextMessageModel(text="Welcome to our platform!"),
+            #ButtonMessageModel(buttons={"title": "Learn More", "options": [{"label":"Yes","value":"Yes"}]}),
+            #TableMessageModel(table="<table><tr><th>Name</th><th>Age</th></tr><tr><td>Alice</td><td>30</td></tr></table>"),
+            #CardMessageModel(
+            #    text="Special Offer",
+            #    description="Get 20% off your next purchase.",
+            #    image_url="https://example.com/offer.png",
+            #    link="https://example.com/deals"
+            #    ),
+            #HtmlMessageModel(html="<h2>Today's Highlights</h2><ul><li>News Item 1</li><li>News Item 2</li></ul>"),
+            FileCollectionModel(title="See files below", files=[FileModel(type='application/pdf',url="https://example.com/manual.pdf", filename="UserManual.pdf")] ),
+            #{"type": "file", "title":"Download this","files": [{'type': 'application/pdf', 'url': 'https://example.com/manual.pdf', 'filename': 'UserManual.pdf'}]}
             ]
 
         # Send messages
