@@ -166,6 +166,8 @@ class Captivate(BaseModel):
     DEV_URL: str = Field(default="https://channel.dev.captivat.io/api/channel/sendMessage", exclude=True)
     PROD_URL: str = Field(default="https://channel.prod.captivat.io/api/channel/sendMessage", exclude=True)
     
+    DEV_URL_V2: str = Field(default="https://channel.dev.captivat.io/api/channel/v2/sendMessage", exclude=True)
+    PROD_URL_V2: str = Field(default="https://channel.prod.captivat.io/api/channel/v2/sendMessage", exclude=True)
     # Prevent session_id and hasLivechat from being changed once set
     _session_id_set = False
     _hasLivechat_set = False
@@ -347,9 +349,9 @@ class Captivate(BaseModel):
         """
         return self.user_input
     
-    async def async_send_message(self, environment: str = "dev") -> Dict[str, Any]:
+    async def async_send_message_v1(self, environment: str = "dev") -> Dict[str, Any]: #DEPRECATED WILL NOT BE MAINTAINED
         """
-        Asynchronously sends the CaptivateResponseModel to the API endpoint based on the environment.
+        Asynchronously sends the CaptivateResponseModel to the API endpoint based on the environment. DEP
 
         Args:
             environment (str): The environment to use ('dev' or 'prod'). Defaults to 'dev'.
@@ -413,4 +415,32 @@ class Captivate(BaseModel):
         response.raise_for_status()
         return response
     
+    
+    async def async_send_message(self, environment: str = "dev") -> Dict[str, Any]:
+        """
+        Asynchronously sends the CaptivateResponseModel to the API endpoint based on the environment.
+
+        Args:
+            environment (str): The environment to use ('dev' or 'prod'). Defaults to 'dev'.
+
+        Returns:
+        Dict[str, Any]: The response from the API.
+        """
+        if not self.response:
+            raise ValueError("Response is not set. Cannot send an empty response.")
+
+        # Determine the API URL based on the environment
+        api_url = self.PROD_URL_V2 if environment == "prod" else self.DEV_URL_V2
+
+        # Convert the response to a dictionary
+        payload = self.response.model_dump()
+
+        # Send the request
+        async with httpx.AsyncClient() as client:
+            response = await client.post(api_url, json=payload)
+
+        # Raise an error if the request failed
+        response.raise_for_status()
+
+        return response.json()  # Return the response as a JSON dictionary
     

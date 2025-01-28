@@ -68,7 +68,8 @@ async def main():
             ActionModel(id="submit", data={"form_id": "1234"})
         ]
         #captivate_instance.set_outgoing_action(outgoing_actions)
-        print
+       
+        #await captivate_instance.async_send_message(environment="dev") #dev or prod
         await captivate_instance.async_send_message(environment="dev") #dev or prod
         print(captivate_instance.get_response())
         #print("Captivate Model Instance:", captivate_instance.model_dump_json(indent=4))
