@@ -3,7 +3,7 @@ import asyncio
 
 async def main():
     data_action = {
-        "session_id": "HFQ7EXH-SSAMNZJ-G85YG8R-TVQN46B - 67973c2d00f6ee0014b56c8a - 281d9eaf-c7b8-4471-b2bf-d8080a7541bb",
+        "session_id": "HFQ7EXH-SSAMNZJ-G85YG8R-TVQN46B - 6798d2b600f6ee0014b576c0 - fixthisaidz",
         "endpoint": "action",
         "user_input": "tell me about EU regulations",
         "incoming_action": [
@@ -45,7 +45,7 @@ async def main():
         #print(captivate_instance.get_conversation_title())
         #print(captivate_instance.get_incoming_action())
         messages = [
-            #TextMessageModel(text="Welcome to our platform!"),
+            TextMessageModel(text="Welcome to our platform!"),
             #ButtonMessageModel(buttons={"title": "Learn More", "options": [{"label":"Yes","value":"Yes"}]}),
             #TableMessageModel(table="<table><tr><th>Name</th><th>Age</th></tr><tr><td>Alice</td><td>30</td></tr></table>"),
             #CardMessageModel(
@@ -69,7 +69,7 @@ async def main():
         ]
         #captivate_instance.set_outgoing_action(outgoing_actions)
         await captivate_instance.async_send_message(environment="dev") #dev or prod
-        #print(captivate_instance.get_response())
+        print(captivate_instance.get_response())
         #print("Captivate Model Instance:", captivate_instance.model_dump_json(indent=4))
     except Exception as e:
         print("Error:", e)

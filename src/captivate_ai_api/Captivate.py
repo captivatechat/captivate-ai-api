@@ -47,7 +47,7 @@ class FileModel(BaseModel):
         return self
 
 class FileCollectionModel(BaseModel):
-    type: str = 'file'  # e.g., "file"
+    type: str = 'files'  # e.g., "file"
     title: str  # e.g., "This is the image"
     files: List[FileModel]  # List of files
     
