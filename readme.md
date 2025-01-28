@@ -89,14 +89,14 @@ async def handle_chat(data: CaptivateRequestModel):
             TextMessageModel(text="Welcome to our platform!"),
             ButtonMessageModel(buttons={"title": "Learn More", "options": [{"label":"Yes","value":"Yes"}]}),
             TableMessageModel(table="<table><tr><th>Name</th><th>Age</th></tr><tr><td>Alice</td><td>30</td></tr></table>"),
-            CardMessageModel(
+            CardCollectionModel(cards=[CardMessageModel(
                 text="Special Offer",
                 description="Get 20% off your next purchase.",
                 image_url="https://example.com/offer.png",
                 link="https://example.com/deals"
-            ),
+            )]),
             HtmlMessageModel(html="<h2>Today's Highlights</h2><ul><li>News Item 1</li><li>News Item 2</li></ul>"),
-            FileCollectionModel(title="See files below", files=[FileModel(type='application/pdf',url="https://example.com/manual.pdf", filename="UserManual.pdf")] ),
+            FileCollectionModel(files=[FileModel(type='application/pdf',url="https://example.com/manual.pdf", filename="UserManual.pdf")] ),
             {"type": "custom", "content": "This is a custom message."}
         ]
         
@@ -368,7 +368,7 @@ has_livechat = captivate_instance.get_has_livechat()
 ### 14. `set_response`
 
 ```python
-def set_response(self, response: List[Union[TextMessageModel, FileCollectionModel, ButtonMessageModel, TableMessageModel, CardMessageModel, HtmlMessageModel, dict]]) -> None:
+def set_response(self, response: List[Union[TextMessageModel, FileCollectionModel, ButtonMessageModel, TableMessageModel, CardCollectionModel, HtmlMessageModel, dict]]) -> None:
 ```
 - **Description**: Sets the response messages in the `Captivate` instance.
 - **Example**: 
@@ -377,12 +377,12 @@ captivate_instance.set_response([
             TextMessageModel(text="Welcome to our platform!"),
             ButtonMessageModel(buttons={"title": "Learn More", "action": "navigate"}),
             TableMessageModel(table="<table><tr><th>Name</th><th>Age</th></tr><tr><td>Alice</td><td>30</td></tr></table>"),
-            CardMessageModel(
+            CardCollectionModel(cards=[CardMessageModel(
                 text="Special Offer",
                 description="Get 20% off your next purchase.",
                 image_url="https://example.com/offer.png",
                 link="https://example.com/deals"
-                ),
+            )]),
             HtmlMessageModel(html="<h2>Today's Highlights</h2><ul><li>News Item 1</li><li>News Item 2</li></ul>"),
            FileCollectionModel(title="See files below", files=[FileModel(type='application/pdf',url="https://example.com/manual.pdf", filename="UserManual.pdf")] ),
             {"type": "custom", "content": "This is a custom message."}

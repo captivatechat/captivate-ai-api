@@ -18,13 +18,15 @@ class TableMessageModel(BaseModel):
     type: str = "table"
     table: str  # HTML formatted table
 
-
 class CardMessageModel(BaseModel):
-    type: str = "cards"
     text: str
     description: str
     image_url: str
     link: str
+
+class CardCollectionModel(BaseModel):
+    type: str = "cards"
+    cards: List[CardMessageModel]
 
 
 class HtmlMessageModel(BaseModel):
@@ -48,7 +50,6 @@ class FileModel(BaseModel):
 
 class FileCollectionModel(BaseModel):
     type: str = 'files'  # e.g., "file"
-    title: str  # e.g., "This is the image"
     files: List[FileModel]  # List of files
     
     
@@ -140,7 +141,7 @@ class CaptivateResponseModel(BaseModel):
             FileCollectionModel,
             ButtonMessageModel,
             TableMessageModel,
-            CardMessageModel,
+            CardCollectionModel,
             HtmlMessageModel,
             dict,
         ]

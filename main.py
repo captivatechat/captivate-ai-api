@@ -1,9 +1,9 @@
-from src.captivate_ai_api.Captivate import ActionModel, Captivate, FileCollectionModel,CardMessageModel, FileModel, HtmlMessageModel, TableMessageModel, TextMessageModel,ButtonMessageModel
+from src.captivate_ai_api.Captivate import ActionModel, Captivate, FileCollectionModel,CardCollectionModel,CardMessageModel, FileModel, HtmlMessageModel, TableMessageModel, TextMessageModel,ButtonMessageModel
 import asyncio
 
 async def main():
     data_action = {
-        "session_id": "HFQ7EXH-SSAMNZJ-G85YG8R-TVQN46B - 6798d2b600f6ee0014b576c0 - fixthisaidz",
+        "session_id": "HFQ7EXH-SSAMNZJ-G85YG8R-TVQN46B - 6798d86b00f6ee0014b5783d - fixthisaidz",
         "endpoint": "action",
         "user_input": "tell me about EU regulations",
         "incoming_action": [
@@ -45,17 +45,17 @@ async def main():
         #print(captivate_instance.get_conversation_title())
         #print(captivate_instance.get_incoming_action())
         messages = [
-            TextMessageModel(text="Welcome to our platform!"),
+            #TextMessageModel(text="Welcome to our platform!"),
             #ButtonMessageModel(buttons={"title": "Learn More", "options": [{"label":"Yes","value":"Yes"}]}),
             #TableMessageModel(table="<table><tr><th>Name</th><th>Age</th></tr><tr><td>Alice</td><td>30</td></tr></table>"),
-            #CardMessageModel(
-            #    text="Special Offer",
-            #    description="Get 20% off your next purchase.",
-            #    image_url="https://example.com/offer.png",
-            #    link="https://example.com/deals"
-            #    ),
+            CardCollectionModel(cards=[CardMessageModel(
+                text="Special Offer",
+                description="Get 20% off your next purchase.",
+                image_url="https://example.com/offer.png",
+                link="https://example.com/deals"
+            )]),
             #HtmlMessageModel(html="<h2>Today's Highlights</h2><ul><li>News Item 1</li><li>News Item 2</li></ul>"),
-            FileCollectionModel(title="See files below", files=[FileModel(type='application/pdf',url="https://example.com/manual.pdf", filename="UserManual.pdf")] ),
+            #FileCollectionModel(files=[FileModel(type='application/pdf',url="https://example.com/manual.pdf", filename="UserManual.pdf")] ),
             #{"type": "file", "title":"Download this","files": [{'type': 'application/pdf', 'url': 'https://example.com/manual.pdf', 'filename': 'UserManual.pdf'}]}
             ]
 
@@ -68,6 +68,7 @@ async def main():
             ActionModel(id="submit", data={"form_id": "1234"})
         ]
         #captivate_instance.set_outgoing_action(outgoing_actions)
+        print
         await captivate_instance.async_send_message(environment="dev") #dev or prod
         print(captivate_instance.get_response())
         #print("Captivate Model Instance:", captivate_instance.model_dump_json(indent=4))
