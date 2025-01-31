@@ -73,12 +73,12 @@ Here's the JSON payload you will send in the POST request:
 ## Usage Example
 
 ```python
-from captivate_ai_api import Captivate, UserModel, TextMessageModel
+from captivate_ai_api import Captivate, TextMessageModel
 
 
 
 @app.post("/chat")
-async def handle_chat(data: CaptivateRequestModel):
+async def handle_chat(data: any):
     try:
         # Create Captivate instance using the request data
         captivate = Captivate(**data.dict())

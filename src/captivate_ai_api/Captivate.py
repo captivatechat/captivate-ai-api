@@ -334,7 +334,7 @@ class Captivate(BaseModel):
         Returns the CaptivateResponseModel as a JSON string if it exists, otherwise returns None.
         """
         if self.response:
-            return self.response.model_dump_json()  # Convert the response to a JSON string
+            return self.response.model_dump()  # Convert the response to a JSON string
         return None
     
     def get_files(self) -> Optional[List[Dict[str, Any]]]:
