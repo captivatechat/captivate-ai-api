@@ -56,7 +56,7 @@ class FileCollectionModel(BaseModel):
 class UserModel(BaseModel):
     firstName: Optional[str] = None
     lastName: Optional[str] = None
-    email: Optional[EmailStr] = None
+    email: Optional[str] = None
 
 
 class ChannelMetadataModel(BaseModel):
@@ -93,17 +93,14 @@ class ChannelMetadataModel(BaseModel):
             "type": "title",
             "title": title,
         }
-        self.set_custom("title", title_data)
+        self.set_custom("title", title_data) #this is to support old version
+        self.set_custom("conversation_title", title)
 
     def get_conversation_title(self) -> Optional[Dict[str, Any]]:
         """
-        Retrieve only the 'title' value from the conversation title object.
+        Retrieve the 'title' from metadata.
         """
-        title_obj = self.get_custom("title")
-        if isinstance(title_obj, dict) and "title" in title_obj:
-            return title_obj["title"]
-
-        return None
+        return self.get_custom("conversation_title")
 
 
 class InternalMetadataModel(BaseModel):

@@ -3,7 +3,7 @@ import asyncio
 
 async def main():
     data_action = {
-        "session_id": "66f016f09d5961b684ce05f0_6092d3cc-ffd5-4998-ae1e-0fdedcc3096f",
+        "session_id": "lance_catcher_two_602dd1f8-d932-4b13-8c33-162d7dfb929d",
         "endpoint": "action",
         "user_input": "tell me about EU regulations",
         "incoming_action": [
@@ -46,7 +46,7 @@ async def main():
         #print(captivate_instance.get_incoming_action())
         messages = [
             TextMessageModel(text="Lets party!"),
-            TextMessageModel(text="I can do this!")
+            #TextMessageModel(text="I can do this!"),
             #ButtonMessageModel(buttons={"title": "Learn More", "options": [{"label":"Yes","value":"Yes"}]}),
             #TableMessageModel(table="<table><tr><th>Name</th><th>Age</th></tr><tr><td>Alice</td><td>30</td></tr></table>"),
             #CardCollectionModel(cards=[CardMessageModel(
@@ -57,7 +57,7 @@ async def main():
             #)]),
             #HtmlMessageModel(html="<h2>Today's Highlights</h2><ul><li>News Item 1</li><li>News Item 2</li></ul>"),
             #FileCollectionModel(files=[FileModel(type='application/pdf',url="https://example.com/manual.pdf", filename="UserManual.pdf")] ),
-            #{"type": "file", "title":"Download this","files": [{'type': 'application/pdf', 'url': 'https://example.com/manual.pdf', 'filename': 'UserManual.pdf'}]}
+            {"type": "policy_assesment_id","id":"12345"}
             ]
 
         # Send messages
