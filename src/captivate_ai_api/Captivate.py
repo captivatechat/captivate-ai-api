@@ -1,6 +1,18 @@
 import httpx
-from pydantic import BaseModel, EmailStr, model_validator, Field, RootModel
+from pydantic import BaseModel, model_validator, Field
 from typing import Optional, Dict, Any, List, Union
+import json
+import asyncio
+import redis.asyncio as redis
+from datetime import datetime, timezone
+
+
+# Session Model
+class Session(BaseModel):
+    session_id: str
+    chat_history: List[Dict[str, Any]] = []  # Auto-filled chat history
+    context: Dict[str, Any] = {}  # Auto-filled context
+    conversation_title: str = "Untitled"
 
 
 # Predefined message types
@@ -18,11 +30,13 @@ class TableMessageModel(BaseModel):
     type: str = "table"
     table: str  # HTML formatted table
 
+
 class CardMessageModel(BaseModel):
     text: str
     description: str
     image_url: str
     link: str
+
 
 class CardCollectionModel(BaseModel):
     type: str = "cards"
@@ -32,7 +46,6 @@ class CardCollectionModel(BaseModel):
 class HtmlMessageModel(BaseModel):
     type: str = "html"
     html: str  # HTML content
-
 
 
 class FileModel(BaseModel):
@@ -48,11 +61,12 @@ class FileModel(BaseModel):
             )
         return self
 
+
 class FileCollectionModel(BaseModel):
-    type: str = 'files'  # e.g., "file"
+    type: str = "files"  # e.g., "file"
     files: List[FileModel]  # List of files
-    
-    
+
+
 class UserModel(BaseModel):
     firstName: Optional[str] = None
     lastName: Optional[str] = None
@@ -61,7 +75,9 @@ class UserModel(BaseModel):
 
 class ChannelMetadataModel(BaseModel):
     user: Optional[UserModel] = None
-    channelMetadata: Dict[str, Any] = {} # This will allow dynamic properties at this level
+    channelMetadata: Dict[str, Any] = (
+        {}
+    )  # This will allow dynamic properties at this level
     custom: Dict[str, Any] = {}  # Custom dynamic properties
     conversationCreatedAt: Optional[str] = None  # ISO8601 format for dates
     conversationUpdatedAt: Optional[str] = None  # ISO8601 format for dates
@@ -93,7 +109,7 @@ class ChannelMetadataModel(BaseModel):
             "type": "title",
             "title": title,
         }
-        self.set_custom("title", title_data) #this is to support old version
+        self.set_custom("title", title_data)  # this is to support old version
         self.set_custom("conversation_title", title)
 
     def get_conversation_title(self) -> Optional[Dict[str, Any]]:
@@ -124,7 +140,6 @@ class ActionModel(BaseModel):
         object.__setattr__(self, "payload", unified_value)
         object.__setattr__(self, "data", unified_value)
 
-
     class Config:
         populate_by_name = (
             True  # Allows using both 'id' and 'action', 'payload', and 'data' as input
@@ -145,7 +160,9 @@ class CaptivateResponseModel(BaseModel):
     ] = []  # List of responses Default to an empty list
     session_id: str  # Session ID to identify the conversation
     metadata: MetadataModel  # Updated metadata
-    outgoing_action: Optional[List[ActionModel]] = None  # Optional actions to taken such as redirecting user to website
+    outgoing_action: Optional[List[ActionModel]] = (
+        None  # Optional actions to taken such as redirecting user to website
+    )
     hasLivechat: bool  # Whether there is live chat available
 
 
@@ -157,17 +174,39 @@ class Captivate(BaseModel):
     incoming_action: Optional[List[ActionModel]] = None
     hasLivechat: bool
     response: Optional[CaptivateResponseModel] = None
+    session: Optional[Session] = None  # Session storage (either in-memory or Redis)
+    memory_mode: bool = (
+        False  # True = Use in-memory session, False = Don't track session
+    )
+    redis_url: str = None
+    redis_client: Optional[Any] = None
+    llm: Optional[Any] = None
+    longterm_context_tracking: bool = False
+    generate_conversation_title: bool = False
 
-
+    """Constants"""
     # API URLs as constants
-    DEV_URL: str = Field(default="https://channel.dev.captivat.io/api/channel/sendMessage", exclude=True)
-    PROD_URL: str = Field(default="https://channel.prod.captivat.io/api/channel/sendMessage", exclude=True)
-    
-    DEV_URL_V2: str = Field(default="https://channel.dev.captivat.io/api/channel/v2/sendMessage", exclude=True)
-    PROD_URL_V2: str = Field(default="https://channel.prod.captivat.io/api/channel/v2/sendMessage", exclude=True)
+    DEV_URL: str = Field(
+        default="https://channel.dev.captivat.io/api/channel/sendMessage", exclude=True
+    )
+    PROD_URL: str = Field(
+        default="https://channel.prod.captivat.io/api/channel/sendMessage", exclude=True
+    )
+
+    DEV_URL_V2: str = Field(
+        default="https://channel.dev.captivat.io/api/channel/v2/sendMessage",
+        exclude=True,
+    )
+    PROD_URL_V2: str = Field(
+        default="https://channel.prod.captivat.io/api/channel/v2/sendMessage",
+        exclude=True,
+    )
+
+    """Flags for class safeguards"""
     # Prevent session_id and hasLivechat from being changed once set
     _session_id_set = False
     _hasLivechat_set = False
+    _has_responded: bool = False  # Flag to ensure `set_response` is called only once
 
     @model_validator(mode="before")
     def check_immutable_fields(cls, values):
@@ -217,6 +256,225 @@ class Captivate(BaseModel):
             self.response.metadata = self.metadata
 
         return self
+
+    @classmethod
+    async def create(
+        cls,
+        data_dict,
+        memory_enabled=False,
+        redis_url=None,
+        llm=None,
+        longterm_context=False,
+        generate_conversation_title=False,
+    ):
+        instance = cls(**data_dict)
+
+        if memory_enabled and redis_url:
+            await instance._create_memory(redis_url)
+            if llm:
+                instance.enable_llm_features(
+                    llm=llm,
+                    longterm_context_tracking=longterm_context,
+                    generate_conversation_title=generate_conversation_title,
+                )
+                if generate_conversation_title:
+                    await instance._generate_conversation_title()
+
+        await instance._load_or_create_session()
+
+        return instance
+
+    def enable_llm_features(
+        self,
+        llm: Any,
+        longterm_context_tracking: bool = False,
+        generate_conversation_title: bool = False,
+    ) -> None:
+        """
+        Enable LLM-based features such as conversation title generation and long-term context tracking.
+
+        Parameters:
+        - `llm`: Any LangChain LLM object (e.g., OpenAI, HuggingFace, etc.).
+        - `longterm_context_tracking`: Enables memory-based context tracking.
+        - `generate_conversation_title`: Enables automatic title generation for new conversations.
+
+        Requires memory mode to be enabled.
+        """
+        if not self.memory_mode:
+            raise ValueError(
+                "Memory mode must be enabled before enabling LLM features."
+            )
+
+        self.llm = llm
+        self.longterm_context_tracking = longterm_context_tracking
+        self.generate_conversation_title = generate_conversation_title
+
+    async def _create_memory(self, redis_url: str):
+        """Enable memory mode with Redis and load/create the session."""
+        self.memory_mode = True
+        self.redis_url = redis_url
+        self.redis_client = await redis.Redis.from_url(
+            self.redis_url, decode_responses=True
+        )
+
+    async def _load_or_create_session(self):
+        """Load session or create a new one and append the user input."""
+        if self.memory_mode and self.redis_client:
+            session_data = await self.redis_client.get(f"session:{self.session_id}")
+            if session_data:
+                # Parse and load the session
+                session_dict = json.loads(session_data)
+                self.session = Session(
+                    **session_dict
+                )  # Create a Session model instance
+            else:
+                # Create a new session if not found
+                self.session = Session(
+                    session_id=self.session_id,
+                    chat_history=[],
+                    conversation_title=self.get_conversation_title(),
+                )
+
+            # If user input exists, append it to the session's chat history
+            if self.user_input:
+                self.session.chat_history.append(
+                    {
+                        "role": "user",
+                        "message": self.user_input,
+                        "timestamp": datetime.now(
+                            timezone.utc
+                        ).isoformat(),  # Add timestamp in ISO format
+                    }
+                )
+
+            # Extract context if LLM features are enabled
+            if self.llm and self.longterm_context_tracking:
+                extracted_context = await self.extract_context()
+                self.session.context.update(extracted_context)
+
+            # Save session back to Redis
+            await self.save_session()
+
+    async def _generate_conversation_title(self) -> None:
+        """Generates a conversation title using the LLM."""
+        if not self.llm or not self.generate_conversation_title:
+            return None
+
+        # Skip title generation for default messages of Captivate chat
+        if not self.user_input or self.user_input.strip().upper() == "START CHAT":
+            return  # Do nothing if input is empty or "START CHAT"
+
+        session_key = f"session:{self.session_id}"
+
+        # Check if title is already stored in session
+        if self.memory_mode and self.redis_client:
+
+            session_data = await self.redis_client.get(session_key)
+
+            if session_data:
+                session_data = json.loads(
+                    session_data
+                )  # Convert JSON string to dictionary
+                existing_title = session_data.get("conversation_title")
+
+                if existing_title:
+                    print("Title exists")
+                    self.set_conversation_title(existing_title)
+                    return  # Skip generation if it exists
+
+        prompt = f"""
+        You are an Agent tasked to generate a concise title for a conversation based on the user's message. The title should be brief and short, with a maximum of 5 words.  Return the title as a JSON object with the key "title".  For example:
+
+        ```json
+        {{"title": "Concise Conversation Title"}}
+        Message: {self.user_input}
+        """
+
+        try:
+            title_response = self.llm.invoke(prompt)
+            response_content = title_response.content.strip()
+            title_json = json.loads(response_content)
+
+            title = title_json.get("title")
+
+            if title:
+                self.set_conversation_title(title)
+
+            else:
+                print("LLM response did not contain 'title' key:", response_content)
+                self.set_conversation_title("Untitled Conversation")
+        except Exception as e:
+            print(f"Error generating title: {e}")
+            return None
+
+    async def extract_context(self) -> Dict[str, Any]:
+        """Extract important context from user input & previous bot message using LLM."""
+        if not self.llm:
+            return {}
+
+        last_bot_message = next(
+            (
+                msg["message"]
+                for msg in reversed(self.session.chat_history)
+                if msg["role"] == "bot"
+            ),
+            None,
+        )
+
+        prompt = (
+            """You are an Agent for keeping memory context. 
+            Extract and store important context about this chat. Only user context is needed ignore Bot context
+            Your OUTPUT will be strictly in JSON. Use flat structure and avoid using nested objects
+            Make sure to lower case property names\n"""
+            f"Bot: {last_bot_message if last_bot_message else 'N/A'}\n"
+            f"User: {self.user_input}\n"
+        )
+
+        extracted_text = self.llm.invoke(prompt)
+        try:
+            return json.loads(extracted_text.content)
+        except json.JSONDecodeError:
+            return {"error": "Failed to extract structured context"}
+
+    async def save_session(self):
+        """Asynchronously save the updated session to Redis."""
+        if self.memory_mode and self.redis_client and self.session:
+            await self.redis_client.set(
+                f"session:{self.session_id}", json.dumps(self.session.model_dump())
+            )
+
+    async def get_chat_history(self) -> List[Dict[str, str]]:
+        """
+        Retrieve the chat history from Redis.
+        """
+        if not self.memory_mode or not self.redis_client:
+            raise ValueError("Memory mode is not enabled. Call `enable_memory` first.")
+
+        session_data = await self.redis_client.get(f"session:{self.session_id}")
+        if session_data:
+            session_dict = json.loads(session_data)
+            return session_dict.get("chat_history", [])
+        return []  # Return an empty history if no data is found
+
+    async def save_bot_message_to_history(self, bot_message: str) -> None:
+        """
+        Save the bot's message to the session's chat history asynchronously.
+        """
+        if self.session is not None:
+            # Append the bot message to the chat history
+            self.session.chat_history.append(
+                {
+                    "role": "bot",
+                    "message": bot_message,
+                    "timestamp": datetime.now(
+                        timezone.utc
+                    ).isoformat(),  # Add timestamp in ISO format
+                }
+            )
+            # Save session asynchronously
+            await self.save_session()
+        else:
+            print("Session not loaded or created.")
 
     def get_session_id(self) -> str:
         """
@@ -278,7 +536,7 @@ class Captivate(BaseModel):
         """
         return self.hasLivechat
 
-    def set_response(
+    async def set_response(
         self,
         response: List[
             Union[
@@ -293,8 +551,20 @@ class Captivate(BaseModel):
         ],
     ) -> None:
         """
-        Method to set the response messages in Captivate instance.
+        Method to set the response messages in Captivate instance. This method can only be
+        called once per instance. This is to ensure we avoid bad practices of overwriting responses in the library
+        Instead all response set from the controller are considered final and ready for take-off
         """
+        # Ensure that the response is only set once
+        if self._has_responded:
+            print(
+                f"Warning: Response has already been set for session {self.session_id}. Subsequent calls will be ignored."
+            )
+            return  # Return early if already responded, preventing further changes
+
+        # Mark that the response has been set
+        self._has_responded = True
+
         # Ensure the response object exists
         if not self.response:
             self.response = CaptivateResponseModel(
@@ -305,6 +575,13 @@ class Captivate(BaseModel):
 
         # Set the response_messages
         self.response.response = response
+
+        # If memory_mode is enabled and we have a session, treat the entire response as a bot message
+        if self.memory_mode and self.session:
+            # You can directly treat the response as the bot's message in this case
+            bot_message = response  # the entire response object is a bot message
+            # Save the bot's message asynchronously without blocking the function execution
+            await self.save_bot_message_to_history(bot_message)
 
     def get_incoming_action(self) -> Optional[List[ActionModel]]:
         """
@@ -325,7 +602,7 @@ class Captivate(BaseModel):
                 hasLivechat=self.hasLivechat,
             )
         self.response.outgoing_action = actions
-        
+
     def get_response(self) -> Optional[str]:
         """
         Returns the CaptivateResponseModel as a JSON string if it exists, otherwise returns None.
@@ -333,7 +610,7 @@ class Captivate(BaseModel):
         if self.response:
             return self.response.model_dump()  # Convert the response to a JSON string
         return None
-    
+
     def get_files(self) -> Optional[List[Dict[str, Any]]]:
         """
         Returns the list of files associated with the Captivate instance.
@@ -345,8 +622,10 @@ class Captivate(BaseModel):
         Returns the value of 'user_input' from the Captivate instance.
         """
         return self.user_input
-    
-    async def async_send_message_v1(self, environment: str = "dev") -> Dict[str, Any]: #DEPRECATED WILL NOT BE MAINTAINED
+
+    async def async_send_message_v1(
+        self, environment: str = "dev"
+    ) -> Dict[str, Any]:  # DEPRECATED WILL NOT BE MAINTAINED
         """
         Asynchronously sends the CaptivateResponseModel to the API endpoint based on the environment. DEP
 
@@ -365,14 +644,14 @@ class Captivate(BaseModel):
         else:
             api_url = self.DEV_URL
 
-         # Extract `channel` from metadata
+        # Extract `channel` from metadata
         channel = self.get_channel()
         if not channel:
             raise ValueError("Channel information is missing in metadata.")
-        
+
         # Convert the response message models into dictionaries
         message_data = []
-    
+
         # Iterate through response and serialize models or dicts accordingly
         for message in self.response.response:
             if isinstance(message, BaseModel):
@@ -381,8 +660,10 @@ class Captivate(BaseModel):
             elif isinstance(message, dict):
                 # For dictionaries, serialize directly
                 message_data.append(message)
-                
-        action_data =  [msg.model_dump() for msg in (self.response.outgoing_action) or[]]
+
+        action_data = [
+            msg.model_dump() for msg in (self.response.outgoing_action) or []
+        ]
 
         # Prepare the payload dynamically
         message = {}
@@ -396,14 +677,11 @@ class Captivate(BaseModel):
         payload = {
             "idChat": self.session_id,
             "channel": channel,
-            }
+        }
 
         if message:  # Only add the "message" key if it's not empty
             payload["message"] = message
 
-
-        
-        print(payload)
         # Perform the async POST request
         async with httpx.AsyncClient() as client:
             response = await client.post(api_url, json=payload)
@@ -411,8 +689,7 @@ class Captivate(BaseModel):
         # Raise an error if the request failed
         response.raise_for_status()
         return response
-    
-    
+
     async def async_send_message(self, environment: str = "dev") -> Dict[str, Any]:
         """
         Asynchronously sends the CaptivateResponseModel to the API endpoint based on the environment.
@@ -440,4 +717,3 @@ class Captivate(BaseModel):
         response.raise_for_status()
 
         return response.json()  # Return the response as a JSON dictionary
-    
