@@ -7,5 +7,5 @@ dist/
 build/
 *.egg-info/
 main
-CaptivateMemory
-mredis
+CaptivateMemory.py
+mredis.py
