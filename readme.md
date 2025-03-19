@@ -441,11 +441,13 @@ captivate.set_response([TextMessageModel(text="Hello, World!")])
 # Send the message to the API in 'dev' environment
 response = await captivate.async_send_message(environment="dev")
 ```
+### 18. `download_file_to_memory`
 
 ```python
  async def download_file_to_memory(self, file_info: Dict[str, Any]) -> io.BytesIO:
 ```
 - **Description**:  Downloads a file from the given dictionary and stores it in memory.
+
 - **Example**: 
 ```python
 captivate_instance.download_file_to_memory(file_info)
