@@ -1,7 +1,8 @@
 import httpx
 from pydantic import BaseModel, EmailStr, model_validator, Field, RootModel
 from typing import Optional, Dict, Any, List, Union
-
+import requests
+import io
 
 # Predefined message types
 class TextMessageModel(BaseModel):
@@ -443,4 +444,23 @@ class Captivate(BaseModel):
         response.raise_for_status()
 
         return response.json()  # Return the response as a JSON dictionary
+    
+    async def download_file_to_memory(self, file_info: Dict[str, Any]) -> io.BytesIO:
+        """
+        Downloads a file from the given dictionary and stores it in memory.
+
+        Args:
+            file_info (Dict[str, Any]): Dictionary containing the file details.
+                Expected keys: 'url' (str), 'type' (str), 'filename' (str).
+
+        Returns:
+            io.BytesIO: In-memory file stream.
+        """
+        if "url" not in file_info:
+            raise ValueError("Missing 'url' key in file_info dictionary.")
+
+        response = requests.get(file_info["url"], stream=True)
+        response.raise_for_status()  # Raise an error for failed requests
+
+        return io.BytesIO(response.content)  # Store the file in-memory
     
