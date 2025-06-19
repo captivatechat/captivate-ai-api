@@ -102,15 +102,29 @@ class ChannelMetadataModel(BaseModel):
         Retrieve the 'title' from metadata.
         """
         return self.get_custom("conversation_title")
+    def get(self, key: str, default: Any = None) -> Any:
+        """
+        Retrieves value from any top-level or nested attribute if present.
+        """
+        if key in self.custom:
+            return self.custom.get(key, default)
+        if key in self.channelMetadata:
+            return self.channelMetadata.get(key, default)
+        return getattr(self, key, default)
 
 
 class InternalMetadataModel(BaseModel):
     channelMetadata: ChannelMetadataModel
-
+    def get(self, attr: str, default: Any = None) -> Any:
+            """
+            Simulates a dictionary-style get for known top-level attributes.
+            """
+            return getattr(self, attr, default)
 
 class MetadataModel(BaseModel):
     internal: InternalMetadataModel
-
+    def get(self, attr: str, default: Any = None) -> Any:
+        return getattr(self, attr, default)
 
 class ActionModel(BaseModel):
     id: str = Field(alias="action")  # Supports both 'id' and 'action' as input keys
