@@ -453,5 +453,60 @@ response = await captivate.async_send_message(environment="dev")
 captivate_instance.download_file_to_memory(file_info)
 ```
 
+### 19. `escalate_to_human`
+
+```python
+def escalate_to_human(self) -> None:
+```
+- **Description**: Sets an outgoing action to escalate the conversation to a human agent.
+- **Example**: 
+```python
+captivate_instance.escalate_to_human()
+```
+
+### 20. `escalate_to_agent_router`
+
+```python
+def escalate_to_agent_router(self, reason: Optional[str] = None, intent: Optional[str] = None, recommended_agents: Optional[str] = None) -> None:
+```
+- **Description**: Sets an outgoing action to escalate the conversation to an agent router with optional payload data.
+- **Parameters**:
+  - `reason` (str, optional): The reason for escalation
+  - `intent` (str, optional): The user's intent
+  - `recommended_agents` (str, optional): String of agent IDs to recommend
+- **Example**: 
+```python
+# Basic escalation without payload
+captivate_instance.escalate_to_agent_router()
+
+# Escalation with all parameters
+captivate_instance.escalate_to_agent_router(
+    reason="Complex billing inquiry",
+    intent="resolve_payment_issue", 
+    recommended_agents="agent_123,agent_456,agent_789"
+)
+```
+
+### 21. `escalate_to_agent`
+
+```python
+def escalate_to_agent(self, agent_id: str, reason: Optional[str] = None) -> None:
+```
+- **Description**: Sets an outgoing action to force redirect the conversation to a specific agent.
+- **Parameters**:
+  - `agent_id` (str): The ID of the agent to redirect to
+  - `reason` (str, optional): The reason for the force redirection
+- **Example**: 
+```python
+# Force redirect to a specific agent without reason
+captivate_instance.escalate_to_agent("agent_123")
+
+# Force redirect to a specific agent with reason
+captivate_instance.escalate_to_agent(
+    agent_id="billing_specialist_001", 
+    reason="User has complex billing inquiry requiring specialist knowledge"
+)
+```
+
 
 

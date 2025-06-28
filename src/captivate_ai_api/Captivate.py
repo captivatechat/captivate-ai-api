@@ -341,6 +341,48 @@ class Captivate(BaseModel):
             )
         self.response.outgoing_action = actions
         
+    def escalate_to_human(self) -> None:
+        """
+        Sets an outgoing action to escalate the conversation to a human agent.
+        """
+        escalate_action = ActionModel(id="escalateToHuman")
+        self.set_outgoing_action([escalate_action])
+        
+    def escalate_to_agent_router(self, reason: Optional[str] = None, intent: Optional[str] = None, recommended_agents: Optional[str] = None) -> None:
+        """
+        Sets an outgoing action to escalate the conversation to an agent router.
+        
+        Args:
+            reason (str, optional): The reason for escalation.
+            intent (str, optional): The user's intent.
+            recommended_agents (str, optional): String of agent IDs to recommend.
+        """
+        payload = {}
+        if reason:
+            payload["reason"] = reason
+        if intent:
+            payload["intent"] = intent
+        if recommended_agents:
+            payload["recommended_agents"] = recommended_agents
+            
+        escalate_action = ActionModel(id="escalate_to_agent_router", payload=payload if payload else None)
+        self.set_outgoing_action([escalate_action])
+        
+    def escalate_to_agent(self, agent_id: str, reason: Optional[str] = None) -> None:
+        """
+        Sets an outgoing action to force redirect the conversation to a specific agent.
+        
+        Args:
+            agent_id (str): The ID of the agent to redirect to.
+            reason (str, optional): The reason for the force redirection.
+        """
+        payload = {"agent_id": agent_id}
+        if reason:
+            payload["reason"] = reason
+            
+        escalate_action = ActionModel(id="escalate_to_agent", payload=payload)
+        self.set_outgoing_action([escalate_action])
+        
     def get_response(self) -> Optional[str]:
         """
         Returns the CaptivateResponseModel as a JSON string if it exists, otherwise returns None.
