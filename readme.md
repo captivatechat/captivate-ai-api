@@ -508,5 +508,41 @@ captivate_instance.escalate_to_agent(
 )
 ```
 
+### 22. `set_private_metadata` and Private Metadata Usage
+
+```python
+def set_private_metadata(self, key: str, value: Any) -> None:
+```
+- **Description**:  
+  Sets a key-value pair in the private metadata section (`custom['private']`) of the conversation. This data is for internal use and is not exposed to the end user.  
+  You can retrieve this value using `get_metadata(key)`.
+
+- **Example**:
+```python
+
+
+captivate_instance = Captivate(**data_action)
+
+# Set a private metadata key-value pair
+captivate_instance.set_private_metadata('my_secret', 123)
+
+# Retrieve the private metadata value
+print(captivate_instance.get_metadata('my_secret'))  # Output: 123
+```
+
+#### Reserved Key Protection
+
+Attempting to set reserved keys like `"private"`, `"title"`, or `"conversation_title"` in metadata will raise an exception:
+
+```python
+try:
+    captivate_instance.set_metadata('private', 'should fail')
+except Exception as e:
+    print('Expected error for reserved key:', e)
+```
+
+
+
+
 
 
