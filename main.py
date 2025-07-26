@@ -41,7 +41,30 @@ async def main():
 
     try:
         captivate_instance = Captivate(**data_action)
+        print('Captivate instance created successfully')
         captivate_instance.set_conversation_title('Lord of the rings')
+        print('Conversation title set successfully')
+        # Test set_private_metadata and get_metadata
+        captivate_instance.set_private_metadata('my_secret', 123)
+        print('private my_secret:', captivate_instance.get_metadata('my_secret'))
+        # Test reserved key protection
+        print("Testing 'private' key...")
+        try:
+            captivate_instance.set_metadata('private', 'should fail')
+        except Exception as e:
+            print('Expected error for reserved key:', e)
+
+        print("Testing 'title' key...")
+        try:
+            captivate_instance.set_metadata('title', 'should fail')
+        except Exception as e:
+            print('Expected error for reserved key:', e)
+
+        print("Testing 'conversation_title' key...")
+        try:
+            captivate_instance.set_metadata('conversation_title', 'should fail')
+        except Exception as e:
+            print('Expected error for reserved key:', e)
         #print(captivate_instance.get_conversation_title())
         #print(captivate_instance.get_incoming_action())
         messages = [

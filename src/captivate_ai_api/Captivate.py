@@ -70,38 +70,54 @@ class ChannelMetadataModel(BaseModel):
     def set_custom(self, key: str, value: Any):
         """
         Set or update a key-value pair in the custom object.
+        'private', 'title', and 'conversation_title' are reserved keys and cannot be set directly.
+        Prevents duplicate keys between custom and custom['private'].
         """
+        reserved = {'private', 'title', 'conversation_title'}
+        if key in reserved:
+            raise ValueError(f"'{key}' is a reserved key and cannot be set directly. Use the appropriate setter method instead.")
+        private = self.custom.get("private", {})
+        if key in private:
+            raise ValueError(f"Key '{key}' already exists in private metadata. Remove it from private before setting in custom.")
         self.custom[key] = value
 
     def get_custom(self, key: str) -> Optional[Any]:
-        """
-        Retrieve a value by key from the custom object.
-        """
-        return self.custom.get(key)
+        private = self.custom.get("private", {})
+        if isinstance(private, dict) and key in private:
+            return private[key]
+        if key in self.custom:
+            return self.custom[key]
+        return None
 
     def remove_custom(self, key: str):
         """
-        Remove a key-value pair from the custom object.
+        Remove a key-value pair from the custom object or from private if present.
         """
+        private = self.custom.get("private", {})
+        if key in private:
+            del private[key]
         if key in self.custom:
             del self.custom[key]
 
     def set_conversation_title(self, title: str):
         """
         Set a conversation title in the custom object with the specified format.
+        This bypasses set_custom to allow internal use of reserved keys.
         """
         title_data = {
             "type": "title",
             "title": title,
         }
-        self.set_custom("title", title_data) #this is to support old version
-        self.set_custom("conversation_title", title)
+        # Directly set reserved keys to allow internal logic
+        self.custom["title"] = title_data  # this is to support old version
+        self.custom["conversation_title"] = title
 
     def get_conversation_title(self) -> Optional[Dict[str, Any]]:
         """
         Retrieve the 'title' from metadata.
         """
         return self.get_custom("conversation_title")
+
     def get(self, key: str, default: Any = None) -> Any:
         """
         Retrieves value from any top-level or nested attribute if present.
@@ -111,6 +127,30 @@ class ChannelMetadataModel(BaseModel):
         if key in self.channelMetadata:
             return self.channelMetadata.get(key, default)
         return getattr(self, key, default)
+
+    def set_private_metadata(self, key: str, value: Any):
+        """
+        Set or update a key-value pair in the custom['private'] object, creating it if necessary.
+        'private', 'title', and 'conversation_title' are reserved and cannot be used as subkeys.
+        Prevents duplicate keys between custom and custom['private'].
+        """
+        reserved = {'private', 'title', 'conversation_title'}
+        if key in reserved:
+            raise ValueError(f"'{key}' is a reserved key and cannot be used as a subkey in private metadata.")
+        if key in self.custom:
+            raise ValueError(f"Key '{key}' already exists in custom metadata. Remove it from custom before setting in private.")
+        if 'private' not in self.custom or not isinstance(self.custom['private'], dict):
+            self.custom['private'] = {}
+        self.custom['private'][key] = value
+
+    def get_private_metadata(self, key: str) -> Optional[Any]:
+        """
+        Retrieve a value by key from the custom['private'] object.
+        """
+        private = self.custom.get('private', {})
+        if not isinstance(private, dict):
+            return None
+        return private.get(key)
 
 
 class InternalMetadataModel(BaseModel):
@@ -259,12 +299,25 @@ class Captivate(BaseModel):
         self.metadata.internal.channelMetadata.set_custom(key, value)
 
     def get_metadata(self, key: str) -> Optional[Any]:
-        """Retrieve the value for a given key in the custom metadata."""
+        """Retrieve the value for a given key in the custom metadata, including private if present."""
         return self.metadata.internal.channelMetadata.get_custom(key)
 
     def remove_metadata(self, key: str) -> bool:
-        """Remove a key from the custom metadata."""
-        return self.metadata.internal.channelMetadata.remove_custom(key)
+        """Remove a key from the custom metadata. Returns True if successful, False otherwise."""
+        try:
+            self.metadata.internal.channelMetadata.remove_custom(key)
+            return True
+        except Exception:
+            return False
+
+    # Proxy method for private metadata manipulation
+    def set_private_metadata(self, key: str, value: Any):
+        """Set a key-value pair in the private custom metadata."""
+        self.metadata.internal.channelMetadata.set_private_metadata(key, value)
+
+    def get_private_metadata(self, key: str) -> Optional[Any]:
+        """Retrieve the value for a given key in the private custom metadata."""
+        return self.metadata.internal.channelMetadata.get_private_metadata(key)
 
         # Function to get channel from metadata
 
@@ -516,4 +569,4 @@ class Captivate(BaseModel):
         response.raise_for_status()  # Raise an error for failed requests
 
         return io.BytesIO(response.content)  # Store the file in-memory
-    
+
