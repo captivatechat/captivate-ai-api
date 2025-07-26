@@ -303,8 +303,12 @@ class Captivate(BaseModel):
         return self.metadata.internal.channelMetadata.get_custom(key)
 
     def remove_metadata(self, key: str) -> bool:
-        """Remove a key from the custom metadata."""
-        return self.metadata.internal.channelMetadata.remove_custom(key)
+        """Remove a key from the custom metadata. Returns True if successful, False otherwise."""
+        try:
+            self.metadata.internal.channelMetadata.remove_custom(key)
+            return True
+        except Exception:
+            return False
 
     # Proxy method for private metadata manipulation
     def set_private_metadata(self, key: str, value: Any):
