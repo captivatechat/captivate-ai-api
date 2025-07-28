@@ -64,6 +64,7 @@ class ChannelMetadataModel(BaseModel):
     user: Optional[UserModel] = None
     channelMetadata: Dict[str, Any] = {} # This will allow dynamic properties at this level
     custom: Dict[str, Any] = {}  # Custom dynamic properties
+    private: Dict[str, Any] = {}  # Private dynamic properties (moved from custom)
     conversationCreatedAt: Optional[str] = None  # ISO8601 format for dates
     conversationUpdatedAt: Optional[str] = None  # ISO8601 format for dates
 
@@ -71,20 +72,18 @@ class ChannelMetadataModel(BaseModel):
         """
         Set or update a key-value pair in the custom object.
         'private', 'title', and 'conversation_title' are reserved keys and cannot be set directly.
-        Prevents duplicate keys between custom and custom['private'].
+        Prevents duplicate keys between custom and private.
         """
         reserved = {'private', 'title', 'conversation_title'}
         if key in reserved:
             raise ValueError(f"'{key}' is a reserved key and cannot be set directly. Use the appropriate setter method instead.")
-        private = self.custom.get("private", {})
-        if key in private:
+        if key in self.private:
             raise ValueError(f"Key '{key}' already exists in private metadata. Remove it from private before setting in custom.")
         self.custom[key] = value
 
     def get_custom(self, key: str) -> Optional[Any]:
-        private = self.custom.get("private", {})
-        if isinstance(private, dict) and key in private:
-            return private[key]
+        if key in self.private:
+            return self.private[key]
         if key in self.custom:
             return self.custom[key]
         return None
@@ -93,9 +92,8 @@ class ChannelMetadataModel(BaseModel):
         """
         Remove a key-value pair from the custom object or from private if present.
         """
-        private = self.custom.get("private", {})
-        if key in private:
-            del private[key]
+        if key in self.private:
+            del self.private[key]
         if key in self.custom:
             del self.custom[key]
 
@@ -124,33 +122,26 @@ class ChannelMetadataModel(BaseModel):
         """
         if key in self.custom:
             return self.custom.get(key, default)
+        if key in self.private:
+            return self.private.get(key, default)
         if key in self.channelMetadata:
             return self.channelMetadata.get(key, default)
         return getattr(self, key, default)
 
     def set_private_metadata(self, key: str, value: Any):
         """
-        Set or update a key-value pair in the custom['private'] object, creating it if necessary.
-        'private', 'title', and 'conversation_title' are reserved and cannot be used as subkeys.
-        Prevents duplicate keys between custom and custom['private'].
+        Set or update a key-value pair in the private object, creating it if necessary.
+        Prevents duplicate keys between custom and private.
         """
-        reserved = {'private', 'title', 'conversation_title'}
-        if key in reserved:
-            raise ValueError(f"'{key}' is a reserved key and cannot be used as a subkey in private metadata.")
         if key in self.custom:
-            raise ValueError(f"Key '{key}' already exists in custom metadata. Remove it from custom before setting in private.")
-        if 'private' not in self.custom or not isinstance(self.custom['private'], dict):
-            self.custom['private'] = {}
-        self.custom['private'][key] = value
+            raise ValueError(f"Key '{key}' already exists in public metadata. Remove it from custom before setting in private.")
+        self.private[key] = value
 
     def get_private_metadata(self, key: str) -> Optional[Any]:
         """
-        Retrieve a value by key from the custom['private'] object.
+        Retrieve a value by key from the private object.
         """
-        private = self.custom.get('private', {})
-        if not isinstance(private, dict):
-            return None
-        return private.get(key)
+        return self.private.get(key)
 
 
 class InternalMetadataModel(BaseModel):
