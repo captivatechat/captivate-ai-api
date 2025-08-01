@@ -467,13 +467,13 @@ captivate_instance.escalate_to_human()
 ### 20. `escalate_to_agent_router`
 
 ```python
-def escalate_to_agent_router(self, reason: Optional[str] = None, intent: Optional[str] = None, recommended_agents: Optional[str] = None) -> None:
+def escalate_to_agent_router(self, reason: Optional[str] = None, intent: Optional[str] = None, recommended_agents: Optional[List[str]] = None) -> None:
 ```
 - **Description**: Sets an outgoing action to escalate the conversation to an agent router with optional payload data.
 - **Parameters**:
   - `reason` (str, optional): The reason for escalation
   - `intent` (str, optional): The user's intent
-  - `recommended_agents` (str, optional): String of agent IDs to recommend
+  - `recommended_agents` (List[str], optional): Array of agent IDs to recommend
 - **Example**: 
 ```python
 # Basic escalation without payload
@@ -483,7 +483,7 @@ captivate_instance.escalate_to_agent_router()
 captivate_instance.escalate_to_agent_router(
     reason="Complex billing inquiry",
     intent="resolve_payment_issue", 
-    recommended_agents="agent_123,agent_456,agent_789"
+    recommended_agents=["agent_123", "agent_456", "agent_789"]
 )
 ```
 

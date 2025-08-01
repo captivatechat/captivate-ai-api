@@ -392,14 +392,14 @@ class Captivate(BaseModel):
         escalate_action = ActionModel(id="escalateToHuman")
         self.set_outgoing_action([escalate_action])
         
-    def escalate_to_agent_router(self, reason: Optional[str] = None, intent: Optional[str] = None, recommended_agents: Optional[str] = None) -> None:
+    def escalate_to_agent_router(self, reason: Optional[str] = None, intent: Optional[str] = None, recommended_agents: Optional[List[str]] = None) -> None:
         """
         Sets an outgoing action to escalate the conversation to an agent router.
         
         Args:
             reason (str, optional): The reason for escalation.
             intent (str, optional): The user's intent.
-            recommended_agents (str, optional): String of agent IDs to recommend.
+            recommended_agents (List[str], optional): Array of agent IDs to recommend.
         """
         payload = {}
         if reason:
