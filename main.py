@@ -1294,7 +1294,15 @@ async def root():
     """
     Root endpoint
     """
-    return {"message": "Captivate AI API is running", "version": "1.0.0"}
+    return {
+        "message": "Captivate AI API is running", 
+        "version": "1.0.0",
+        "endpoints": {
+            "/chat": "POST - Main chat endpoint",
+            "/health": "GET - Health check",
+            "/test-router-mode": "GET - Test router mode functionality with decorator pattern"
+        }
+    }
 
 @app.get("/health")
 async def health_check():
@@ -1302,6 +1310,234 @@ async def health_check():
     Health check endpoint
     """
     return {"status": "healthy"}
+
+@app.get("/test-router-mode")
+async def test_router_mode():
+    """
+    Test endpoint to demonstrate router mode functionality
+    """
+    test_results = []
+    
+    try:
+        # Create a test instance
+        test_data = {
+            "session_id": "test_session_123",
+            "metadata": {
+                "internal": {
+                    "channelMetadata": {
+                        "user": {"firstName": "Test", "lastName": "User", "email": "test@example.com"},
+                        "channelMetadata": {"channel": "test"},
+                        "custom": {},
+                        "private": {},
+                        "conversationCreatedAt": "2024-01-15T10:30:00Z",
+                        "conversationUpdatedAt": "2024-01-15T10:35:00Z"
+                    }
+                }
+            },
+            "hasLivechat": False
+        }
+        
+        captivate_instance = Captivate(**test_data)
+        
+        # Test 1: Router mode disabled by default
+        test_results.append({
+            "test": "Router mode disabled by default",
+            "expected": False,
+            "actual": captivate_instance.is_router_mode(),
+            "passed": captivate_instance.is_router_mode() == False
+        })
+        
+        # Test 2: Protected methods should fail when router mode is disabled
+        try:
+            captivate_instance.set_agents(["agent_001", "agent_002"])
+            test_results.append({
+                "test": "set_agents should fail when router mode disabled",
+                "expected": "ValueError",
+                "actual": "No error raised",
+                "passed": False
+            })
+        except ValueError as e:
+            test_results.append({
+                "test": "set_agents should fail when router mode disabled",
+                "expected": "ValueError",
+                "actual": str(e),
+                "passed": "set_agents is only available when router mode is enabled." in str(e)
+            })
+        
+        try:
+            captivate_instance.get_outgoing_action()
+            test_results.append({
+                "test": "get_outgoing_action should fail when router mode disabled",
+                "expected": "ValueError",
+                "actual": "No error raised",
+                "passed": False
+            })
+        except ValueError as e:
+            test_results.append({
+                "test": "get_outgoing_action should fail when router mode disabled",
+                "expected": "ValueError",
+                "actual": str(e),
+                "passed": "get_outgoing_action is only available when router mode is enabled." in str(e)
+            })
+        
+        try:
+            captivate_instance.is_escalating_to_agent_router()
+            test_results.append({
+                "test": "is_escalating_to_agent_router should fail when router mode disabled",
+                "expected": "ValueError",
+                "actual": "No error raised",
+                "passed": False
+            })
+        except ValueError as e:
+            test_results.append({
+                "test": "is_escalating_to_agent_router should fail when router mode disabled",
+                "expected": "ValueError",
+                "actual": str(e),
+                "passed": "is_escalating_to_agent_router is only available when router mode is enabled." in str(e)
+            })
+        
+        # Test 3: Enable router mode
+        captivate_instance.enable_router_mode()
+        test_results.append({
+            "test": "Router mode enabled",
+            "expected": True,
+            "actual": captivate_instance.is_router_mode(),
+            "passed": captivate_instance.is_router_mode() == True
+        })
+        
+        # Test 4: Protected methods should work when router mode is enabled
+        try:
+            captivate_instance.set_agents(["agent_001", "agent_002", "agent_003"])
+            test_results.append({
+                "test": "set_agents should work when router mode enabled",
+                "expected": "Success",
+                "actual": "Success",
+                "passed": True
+            })
+        except Exception as e:
+            test_results.append({
+                "test": "set_agents should work when router mode enabled",
+                "expected": "Success",
+                "actual": str(e),
+                "passed": False
+            })
+        
+        # Test 5: Get agents list
+        agents = captivate_instance.get_agents()
+        test_results.append({
+            "test": "get_agents should return the set agents list",
+            "expected": ["agent_001", "agent_002", "agent_003"],
+            "actual": agents,
+            "passed": agents == ["agent_001", "agent_002", "agent_003"]
+        })
+        
+        # Test 6: Set outgoing action and test get_outgoing_action
+        test_action = ActionModel(id="test_action", payload={"test": "data"})
+        captivate_instance.set_outgoing_action([test_action])
+        
+        try:
+            outgoing_actions = captivate_instance.get_outgoing_action()
+            test_results.append({
+                "test": "get_outgoing_action should work when router mode enabled",
+                "expected": "Success",
+                "actual": "Success",
+                "passed": True
+            })
+        except Exception as e:
+            test_results.append({
+                "test": "get_outgoing_action should work when router mode enabled",
+                "expected": "Success",
+                "actual": str(e),
+                "passed": False
+            })
+        
+        # Test 7: Test escalation detection
+        captivate_instance.escalate_to_agent_router(
+            reason="Test escalation",
+            intent="test_intent",
+            recommended_agents=["agent_001", "agent_002"]
+        )
+        
+        try:
+            escalation_payload = captivate_instance.is_escalating_to_agent_router()
+            test_results.append({
+                "test": "is_escalating_to_agent_router should work when router mode enabled",
+                "expected": "Success",
+                "actual": "Success",
+                "passed": True
+            })
+        except Exception as e:
+            test_results.append({
+                "test": "is_escalating_to_agent_router should work when router mode enabled",
+                "expected": "Success",
+                "actual": str(e),
+                "passed": False
+            })
+        
+        # Test 8: Disable router mode and verify protected methods fail again
+        captivate_instance.disable_router_mode()
+        test_results.append({
+            "test": "Router mode disabled",
+            "expected": False,
+            "actual": captivate_instance.is_router_mode(),
+            "passed": captivate_instance.is_router_mode() == False
+        })
+        
+        try:
+            captivate_instance.set_agents(["agent_004"])
+            test_results.append({
+                "test": "set_agents should fail again when router mode disabled",
+                "expected": "ValueError",
+                "actual": "No error raised",
+                "passed": False
+            })
+        except ValueError as e:
+            test_results.append({
+                "test": "set_agents should fail again when router mode disabled",
+                "expected": "ValueError",
+                "actual": str(e),
+                "passed": "set_agents is only available when router mode is enabled." in str(e)
+            })
+        
+        # Test 9: Test that agents_list can only be set once
+        captivate_instance.enable_router_mode()
+        try:
+            captivate_instance.set_agents(["agent_005"])  # This should fail because agents_list was already set
+            test_results.append({
+                "test": "set_agents should fail when agents_list already set",
+                "expected": "ValueError",
+                "actual": "No error raised",
+                "passed": False
+            })
+        except ValueError as e:
+            test_results.append({
+                "test": "set_agents should fail when agents_list already set",
+                "expected": "ValueError",
+                "actual": str(e),
+                "passed": "agents_list can only be set once" in str(e)
+            })
+        
+        # Calculate overall test results
+        passed_tests = sum(1 for result in test_results if result["passed"] is True)
+        total_tests = len(test_results)
+        
+        return {
+            "message": "Router Mode Decorator Tests",
+            "summary": {
+                "total_tests": total_tests,
+                "passed": passed_tests,
+                "failed": total_tests - passed_tests,
+                "success_rate": f"{(passed_tests/total_tests)*100:.1f}%"
+            },
+            "test_results": test_results
+        }
+        
+    except Exception as e:
+        return {
+            "error": "Test execution failed",
+            "message": str(e),
+            "test_results": test_results
+        }
 
 async def main():
     """
