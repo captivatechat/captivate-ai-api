@@ -3,6 +3,16 @@ from pydantic import BaseModel, EmailStr, model_validator, Field, RootModel
 from typing import Optional, Dict, Any, List, Union
 import requests
 import io
+from functools import wraps
+
+def requires_router_mode(func):
+    """Decorator to ensure router mode is enabled for specific methods."""
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        if not self._router_mode:
+            raise ValueError(f"{func.__name__} is only available when router mode is enabled.")
+        return func(self, *args, **kwargs)
+    return wrapper
 
 # Predefined message types
 class TextMessageModel(BaseModel):
@@ -67,6 +77,7 @@ class ChannelMetadataModel(BaseModel):
     private: Dict[str, Any] = {}  # Private dynamic properties (moved from custom)
     conversationCreatedAt: Optional[str] = None  # ISO8601 format for dates
     conversationUpdatedAt: Optional[str] = None  # ISO8601 format for dates
+    _agents_list_set: bool = False  # Track if agents_list has been set
 
     def set_custom(self, key: str, value: Any):
         """
@@ -96,6 +107,28 @@ class ChannelMetadataModel(BaseModel):
             del self.private[key]
         if key in self.custom:
             del self.custom[key]
+
+    def set_agents(self, agents_list: List[str]) -> None:
+        """
+        Set the agents_list in custom metadata. This can only be set once.
+        
+        Args:
+            agents_list (List[str]): List of agent IDs to set as agents_list
+        """
+        if self._agents_list_set:
+            raise ValueError("agents_list can only be set once and cannot be modified.")
+        
+        self.custom["agents_list"] = agents_list
+        self._agents_list_set = True
+
+    def get_agents(self) -> Optional[List[str]]:
+        """
+        Get the agents_list from custom metadata.
+        
+        Returns:
+            Optional[List[str]]: The list of agent IDs or None if not set
+        """
+        return self.custom.get("agents_list")
 
     def set_conversation_title(self, title: str):
         """
@@ -203,7 +236,7 @@ class Captivate(BaseModel):
     incoming_action: Optional[List[ActionModel]] = None
     hasLivechat: bool
     response: Optional[CaptivateResponseModel] = None
-
+    _router_mode: bool = False  # Track if router mode is enabled
 
     # API URLs as constants
     DEV_URL: str = Field(default="https://channel.dev.captivat.io/api/channel/sendMessage", exclude=True)
@@ -310,6 +343,38 @@ class Captivate(BaseModel):
         """Retrieve the value for a given key in the private custom metadata."""
         return self.metadata.internal.channelMetadata.get_private_metadata(key)
 
+    # Proxy method for AgentsList manipulation
+    def set_agents_list(self, agents_list: List[str]) -> None:
+        """Set the AgentsList in custom metadata. This can only be set once."""
+        self.metadata.internal.channelMetadata.set_agents(agents_list)
+
+    def get_agents_list(self) -> Optional[List[str]]:
+        """Get the AgentsList from custom metadata."""
+        return self.metadata.internal.channelMetadata.get_agents()
+
+    # Proxy method for agents manipulation
+    @requires_router_mode
+    def set_agents(self, agents_list: List[str]) -> None:
+        """Set the agents_list in custom metadata. This can only be set once."""
+        self.metadata.internal.channelMetadata.set_agents(agents_list)
+
+    def get_agents(self) -> Optional[List[str]]:
+        """Get the agents_list from custom metadata."""
+        return self.metadata.internal.channelMetadata.get_agents()
+
+    # Proxy method for router mode manipulation
+    def enable_router_mode(self) -> None:
+        """Enable router mode which allows only router agents to set the agents_list."""
+        self._router_mode = True
+
+    def disable_router_mode(self) -> None:
+        """Disable router mode."""
+        self._router_mode = False
+
+    def is_router_mode(self) -> bool:
+        """Check if router mode is enabled."""
+        return self._router_mode
+
         # Function to get channel from metadata
 
     def get_channel(self) -> Optional[str]:
@@ -384,6 +449,34 @@ class Captivate(BaseModel):
                 hasLivechat=self.hasLivechat,
             )
         self.response.outgoing_action = actions
+        
+    @requires_router_mode
+    def get_outgoing_action(self) -> Optional[List[ActionModel]]:
+        """
+        Retrieves the outgoing actions from the response object, if present.
+        Only available when router mode is enabled.
+        """
+        if not self.response:
+            return None
+        return self.response.outgoing_action
+        
+    @requires_router_mode
+    def is_escalating_to_agent_router(self) -> Optional[Dict[str, Any]]:
+        """
+        Checks if the outgoing action is escalating to agent router and returns the payload.
+        Only available when router mode is enabled.
+        
+        Returns:
+            Optional[Dict[str, Any]]: The payload if escalating to agent router, None otherwise
+        """
+        if not self.response or not self.response.outgoing_action:
+            return None
+            
+        for action in self.response.outgoing_action:
+            if action.id == "escalate_to_agent_router":
+                return action.payload
+                
+        return None
         
     def escalate_to_human(self) -> None:
         """

@@ -487,6 +487,189 @@ captivate_instance.escalate_to_agent_router(
 )
 ```
 
+### 21. Router Mode Management
+
+The Captivate class includes router mode functionality that controls access to certain methods using a decorator pattern.
+
+#### 21.1 `enable_router_mode`
+
+```python
+def enable_router_mode(self) -> None:
+```
+- **Description**: Enables router mode which allows access to protected methods.
+- **Example**: 
+```python
+captivate_instance.enable_router_mode()
+```
+
+#### 21.2 `disable_router_mode`
+
+```python
+def disable_router_mode(self) -> None:
+```
+- **Description**: Disables router mode, preventing access to protected methods.
+- **Example**: 
+```python
+captivate_instance.disable_router_mode()
+```
+
+#### 21.3 `is_router_mode`
+
+```python
+def is_router_mode(self) -> bool:
+```
+- **Description**: Checks if router mode is currently enabled.
+- **Returns**: `bool` - True if router mode is enabled, False otherwise
+- **Example**: 
+```python
+if captivate_instance.is_router_mode():
+    print("Router mode is enabled")
+```
+
+### 22. Protected Methods (Router Mode Required)
+
+The following methods are protected by the `@requires_router_mode` decorator and can only be accessed when router mode is enabled:
+
+#### 22.1 `set_agents`
+
+```python
+@requires_router_mode
+def set_agents(self, agents_list: List[str]) -> None:
+```
+- **Description**: Sets the agents_list in custom metadata. This can only be set once and requires router mode to be enabled.
+- **Parameters**:
+  - `agents_list` (List[str]): List of agent IDs to set as agents_list
+- **Example**: 
+```python
+# Enable router mode first
+captivate_instance.enable_router_mode()
+
+# Set agents list
+captivate_instance.set_agents(["agent_001", "agent_002", "agent_003"])
+```
+
+#### 22.2 `get_outgoing_action`
+
+```python
+@requires_router_mode
+def get_outgoing_action(self) -> Optional[List[ActionModel]]:
+```
+- **Description**: Retrieves the outgoing actions from the response object. Only available when router mode is enabled.
+- **Returns**: `Optional[List[ActionModel]]` - List of outgoing actions or None
+- **Example**: 
+```python
+# Enable router mode first
+captivate_instance.enable_router_mode()
+
+# Get outgoing actions
+outgoing_actions = captivate_instance.get_outgoing_action()
+```
+
+#### 22.3 `is_escalating_to_agent_router`
+
+```python
+@requires_router_mode
+def is_escalating_to_agent_router(self) -> Optional[Dict[str, Any]]:
+```
+- **Description**: Checks if the outgoing action is escalating to agent router and returns the payload. Only available when router mode is enabled.
+- **Returns**: `Optional[Dict[str, Any]]` - The payload if escalating to agent router, None otherwise
+- **Example**: 
+```python
+# Enable router mode first
+captivate_instance.enable_router_mode()
+
+# Check if escalating to agent router
+payload = captivate_instance.is_escalating_to_agent_router()
+if payload:
+    print(f"Escalating with payload: {payload}")
+```
+
+### 23. Router Mode Usage Examples
+
+#### Complete Router Mode Workflow
+
+```python
+# 1. Create Captivate instance
+captivate_instance = Captivate(**data)
+
+# 2. Router mode is disabled by default
+print(captivate_instance.is_router_mode())  # False
+
+# 3. Protected methods will fail when router mode is disabled
+try:
+    captivate_instance.set_agents(["agent_001"])
+except ValueError as e:
+    print(e)  # "set_agents is only available when router mode is enabled."
+
+# 4. Enable router mode
+captivate_instance.enable_router_mode()
+print(captivate_instance.is_router_mode())  # True
+
+# 5. Now protected methods work
+captivate_instance.set_agents(["agent_001", "agent_002"])
+agents = captivate_instance.get_agents()  # ["agent_001", "agent_002"]
+
+# 6. Set up escalation
+captivate_instance.escalate_to_agent_router(
+    reason="Technical issue",
+    recommended_agents=["agent_001"]
+)
+
+# 7. Check escalation status
+payload = captivate_instance.is_escalating_to_agent_router()
+print(payload)  # {"reason": "Technical issue", "recommended_agents": ["agent_001"]}
+
+# 8. Disable router mode
+captivate_instance.disable_router_mode()
+
+# 9. Protected methods fail again
+try:
+    captivate_instance.get_outgoing_action()
+except ValueError as e:
+    print(e)  # "get_outgoing_action is only available when router mode is enabled."
+```
+
+#### Error Handling
+
+```python
+# All protected methods throw consistent errors when router mode is disabled
+try:
+    captivate_instance.set_agents(["agent_001"])
+except ValueError as e:
+    print(e)  # "set_agents is only available when router mode is enabled."
+
+try:
+    captivate_instance.get_outgoing_action()
+except ValueError as e:
+    print(e)  # "get_outgoing_action is only available when router mode is enabled."
+
+try:
+    captivate_instance.is_escalating_to_agent_router()
+except ValueError as e:
+    print(e)  # "is_escalating_to_agent_router is only available when router mode is enabled."
+```
+
+### 24. Decorator Pattern Implementation
+
+The router mode functionality uses a decorator pattern for clean, maintainable code:
+
+```python
+def requires_router_mode(func):
+    """Decorator to ensure router mode is enabled for specific methods."""
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        if not self._router_mode:
+            raise ValueError(f"{func.__name__} is only available when router mode is enabled.")
+        return func(self, *args, **kwargs)
+    return wrapper
+```
+
+**Benefits of the decorator pattern:**
+- **DRY Principle**: Single decorator handles all router mode checks
+- **Clean Code**: Methods focus on core logic, validation is automatic
+- **Easy to Extend**: Add `@requires_router_mode` to any new method
+- **Consistent Errors**: Same error format across all protected methods
+
 ### 21. `escalate_to_agent`
 
 ```python
