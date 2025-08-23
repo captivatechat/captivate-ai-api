@@ -6,7 +6,8 @@ This API is developed by CaptivateChat to handle its API formats.This flexible m
 ## Key Components
 
 ### Models
-- `Captivate`: Primary model managing conversation state
+- `ChatRequest`: Simple request model for API endpoints
+- `Captivate`: Primary model managing conversation state and responses
 - `CaptivateResponseModel`: Handles response messages and metadata
 - `ActionModel`: Manages actions with flexible payload handling
 - `ChannelMetadataModel`: Stores dynamic channel and conversation metadata
@@ -70,10 +71,68 @@ Here's the JSON payload you will send in the POST request:
     "hasLivechat": false
 }
 ```
+## API Structure
+
+The API now has a cleaner structure with a dedicated `ChatRequest` model:
+
+1. **`ChatRequest`**: Simple request model for API endpoints
+2. **`Captivate`**: Handles both request processing and response management
+
+This makes the API more intuitive and easier to use.
+
 ## Usage Example
+
+### Using the new structure:
+
+```python
+from captivate_ai_api import ChatRequest, Captivate, TextMessageModel
+
+# Create a chat request
+chat_request = ChatRequest(
+    session_id="test_session_123",
+    user_input="Hello, how can you help me?",
+    metadata={
+        "internal": {
+            "channelMetadata": {
+                "channelMetadata": {"channel": "web"},
+                "custom": {"mode": "assistant"}
+            }
+        }
+    },
+    hasLivechat=False
+)
+
+# Create Captivate instance using factory method
+captivate = Captivate.create(chat_request)
+
+# Set response messages
+captivate.set_response([
+    TextMessageModel(text="Hello! I'm here to help you.")
+])
+
+# Get the response
+response = captivate.get_response()
+```
+
+### Factory Method Usage:
+
+The `create()` factory method supports multiple input types:
 
 ```python
 from captivate_ai_api import Captivate, TextMessageModel
+
+# From ChatRequest (recommended)
+captivate = Captivate.create(chat_request)
+
+# From dictionary
+data = {"session_id": "123", "user_input": "Hello", ...}
+captivate = Captivate.create(data)
+
+# Backward compatibility - this still works:
+captivate = Captivate(**chat_request.model_dump())     # Direct constructor
+```
+
+### Legacy usage (still supported):
 
 
 
@@ -222,7 +281,28 @@ When you send the POST request to the `/chat` endpoint, the response will look a
 
 ## Functions Overview
 
-### 1. `get_session_id`
+### 1. `create` (Factory Method)
+
+```python
+@classmethod
+def create(cls, data: Union[ChatRequest, Dict[str, Any]]) -> "Captivate":
+```
+- **Description**: Factory method to create a Captivate instance from various input types.
+- **Parameters**:
+  - `data`: Either a ChatRequest instance or a dictionary containing the data
+- **Returns**: `Captivate` - A new Captivate instance
+- **Examples**: 
+```python
+# From ChatRequest
+chat_request = ChatRequest(session_id="123", ...)
+captivate = Captivate.create(chat_request)
+
+# From dictionary
+data = {"session_id": "123", "user_input": "Hello", ...}
+captivate = Captivate.create(data)
+```
+
+### 2. `get_session_id`
 
 ```python
 def get_session_id(self) -> str:
@@ -233,7 +313,7 @@ def get_session_id(self) -> str:
 session_id = captivate_instance.get_session_id()
 ```
 
-### 2. `get_user_input`
+### 3. `get_user_input`
 
 ```python
 def get_user_input(self) -> Optional[str]:
@@ -244,7 +324,7 @@ def get_user_input(self) -> Optional[str]:
 user_input = captivate_instance.get_user_input()
 ```
 
-### 3. `set_conversation_title`
+### 4. `set_conversation_title`
 
 ```python
 def set_conversation_title(self, title: str):
@@ -255,7 +335,7 @@ def set_conversation_title(self, title: str):
 captivate_instance.set_conversation_title("New Conversation Title")
 ```
 
-### 4. `get_conversation_title`
+### 5. `get_conversation_title`
 
 ```python
 def get_conversation_title(self) -> Optional[str]:
@@ -266,7 +346,7 @@ def get_conversation_title(self) -> Optional[str]:
 conversation_title = captivate_instance.get_conversation_title()
 ```
 
-### 5. `set_metadata`
+### 6. `set_metadata`
 
 ```python
 def set_metadata(self, key: str, value: Any):
@@ -277,7 +357,7 @@ def set_metadata(self, key: str, value: Any):
 captivate_instance.set_metadata("custom_key", "custom_value")
 ```
 
-### 6. `get_metadata`
+### 7. `get_metadata`
 
 ```python
 def get_metadata(self, key: str) -> Optional[Any]:
@@ -288,7 +368,7 @@ def get_metadata(self, key: str) -> Optional[Any]:
 metadata_value = captivate_instance.get_metadata("custom_key")
 ```
 
-### 7. `remove_metadata`
+### 8. `remove_metadata`
 
 ```python
 def remove_metadata(self, key: str) -> bool:
@@ -299,7 +379,7 @@ def remove_metadata(self, key: str) -> bool:
 captivate_instance.remove_metadata("custom_key")
 ```
 
-### 8. `get_channel`
+### 9. `get_channel`
 
 ```python
 def get_channel(self) -> Optional[str]:
@@ -310,7 +390,7 @@ def get_channel(self) -> Optional[str]:
 channel = captivate_instance.get_channel()
 ```
 
-### 9. `get_user`
+### 10. `get_user`
 
 ```python
 def get_user(self) -> Optional[UserModel]:
@@ -321,7 +401,7 @@ def get_user(self) -> Optional[UserModel]:
 user = captivate_instance.get_user()
 ```
 
-### 10. `set_user`
+### 11. `set_user`
 
 ```python
 def set_user(self, user: UserModel) -> None:
@@ -332,7 +412,7 @@ def set_user(self, user: UserModel) -> None:
 captivate_instance.set_user(UserModel(firstName="John", lastName="Doe"))
 ```
 
-### 11. `get_created_at`
+### 12. `get_created_at`
 
 ```python
 def get_created_at(self) -> Optional[str]:
@@ -343,7 +423,7 @@ def get_created_at(self) -> Optional[str]:
 created_at = captivate_instance.get_created_at()
 ```
 
-### 12. `get_updated_at`
+### 13. `get_updated_at`
 
 ```python
 def get_updated_at(self) -> Optional[str]:
@@ -354,7 +434,7 @@ def get_updated_at(self) -> Optional[str]:
 updated_at = captivate_instance.get_updated_at()
 ```
 
-### 13. `get_has_livechat`
+### 14. `get_has_livechat`
 
 ```python
 def get_has_livechat(self) -> bool:
@@ -365,7 +445,7 @@ def get_has_livechat(self) -> bool:
 has_livechat = captivate_instance.get_has_livechat()
 ```
 
-### 14. `set_response`
+### 15. `set_response`
 
 ```python
 def set_response(self, response: List[Union[TextMessageModel, FileCollectionModel, ButtonMessageModel, TableMessageModel, CardCollectionModel, HtmlMessageModel, dict]]) -> None:
@@ -389,7 +469,7 @@ captivate_instance.set_response([
             ])
 ```
 
-### 15. `get_incoming_action`
+### 16. `get_incoming_action`
 
 ```python
 def get_incoming_action(self) -> Optional[List[ActionModel]]:
@@ -400,7 +480,7 @@ def get_incoming_action(self) -> Optional[List[ActionModel]]:
 incoming_actions = captivate_instance.get_incoming_action()
 ```
 
-### 16. `set_outgoing_action`
+### 17. `set_outgoing_action`
 
 ```python
 def set_outgoing_action(self, actions: List[ActionModel]) -> None:
@@ -413,7 +493,7 @@ captivate_instance.set_outgoing_action([
 ])
 ```
 
-### 17. `get_response`
+### 18. `get_response`
 
 ```python
 def get_response(self) -> Optional[str]:
@@ -424,7 +504,14 @@ def get_response(self) -> Optional[str]:
 response_json = captivate_instance.get_response()
 ```
 
-### 18. `async_send_message`
+**Note**: The `model_dump()` method still works on both `ChatRequest` and `Captivate` instances for backward compatibility:
+```python
+# Both of these work identically:
+captivate = Captivate.create(chat_request)                    # Factory method (recommended)
+captivate = Captivate(**chat_request.model_dump())           # Direct constructor (backward compatibility)
+```
+
+### 19. `async_send_message`
 
 ```python
 async def async_send_message(self, environment: str = "dev") -> Dict[str, Any]:
@@ -441,7 +528,7 @@ captivate.set_response([TextMessageModel(text="Hello, World!")])
 # Send the message to the API in 'dev' environment
 response = await captivate.async_send_message(environment="dev")
 ```
-### 18. `download_file_to_memory`
+### 20. `download_file_to_memory`
 
 ```python
  async def download_file_to_memory(self, file_info: Dict[str, Any]) -> io.BytesIO:
@@ -453,7 +540,7 @@ response = await captivate.async_send_message(environment="dev")
 captivate_instance.download_file_to_memory(file_info)
 ```
 
-### 19. `escalate_to_human`
+### 21. `escalate_to_human`
 
 ```python
 def escalate_to_human(self) -> None:
@@ -464,7 +551,7 @@ def escalate_to_human(self) -> None:
 captivate_instance.escalate_to_human()
 ```
 
-### 20. `escalate_to_agent_router`
+### 22. `escalate_to_agent_router`
 
 ```python
 def escalate_to_agent_router(self, reason: Optional[str] = None, intent: Optional[str] = None, recommended_agents: Optional[List[str]] = None) -> None:
@@ -487,11 +574,11 @@ captivate_instance.escalate_to_agent_router(
 )
 ```
 
-### 21. Router Mode Management
+### 23. Router Mode Management
 
 The Captivate class includes router mode functionality that controls access to certain methods using a decorator pattern.
 
-#### 21.1 `enable_router_mode`
+#### 23.1 `enable_router_mode`
 
 ```python
 def enable_router_mode(self) -> None:
@@ -502,7 +589,7 @@ def enable_router_mode(self) -> None:
 captivate_instance.enable_router_mode()
 ```
 
-#### 21.2 `disable_router_mode`
+#### 23.2 `disable_router_mode`
 
 ```python
 def disable_router_mode(self) -> None:
@@ -513,7 +600,7 @@ def disable_router_mode(self) -> None:
 captivate_instance.disable_router_mode()
 ```
 
-#### 21.3 `is_router_mode`
+#### 23.3 `is_router_mode`
 
 ```python
 def is_router_mode(self) -> bool:
@@ -526,11 +613,11 @@ if captivate_instance.is_router_mode():
     print("Router mode is enabled")
 ```
 
-### 22. Protected Methods (Router Mode Required)
+### 24. Protected Methods (Router Mode Required)
 
 The following methods are protected by the `@requires_router_mode` decorator and can only be accessed when router mode is enabled:
 
-#### 22.1 `set_agents`
+#### 24.1 `set_agents`
 
 ```python
 @requires_router_mode
@@ -548,7 +635,7 @@ captivate_instance.enable_router_mode()
 captivate_instance.set_agents(["agent_001", "agent_002", "agent_003"])
 ```
 
-#### 22.2 `get_outgoing_action`
+#### 24.2 `get_outgoing_action`
 
 ```python
 @requires_router_mode
@@ -565,7 +652,7 @@ captivate_instance.enable_router_mode()
 outgoing_actions = captivate_instance.get_outgoing_action()
 ```
 
-#### 22.3 `is_escalating_to_agent_router`
+#### 24.3 `is_escalating_to_agent_router`
 
 ```python
 @requires_router_mode
@@ -584,7 +671,7 @@ if payload:
     print(f"Escalating with payload: {payload}")
 ```
 
-### 23. Router Mode Usage Examples
+### 25. Router Mode Usage Examples
 
 #### Complete Router Mode Workflow
 
@@ -649,7 +736,7 @@ except ValueError as e:
     print(e)  # "is_escalating_to_agent_router is only available when router mode is enabled."
 ```
 
-### 24. Decorator Pattern Implementation
+### 26. Decorator Pattern Implementation
 
 The router mode functionality uses a decorator pattern for clean, maintainable code:
 
@@ -670,7 +757,7 @@ def requires_router_mode(func):
 - **Easy to Extend**: Add `@requires_router_mode` to any new method
 - **Consistent Errors**: Same error format across all protected methods
 
-### 21. `escalate_to_agent`
+### 27. `escalate_to_agent`
 
 ```python
 def escalate_to_agent(self, agent_id: str, reason: Optional[str] = None) -> None:
@@ -691,7 +778,7 @@ captivate_instance.escalate_to_agent(
 )
 ```
 
-### 22. `set_private_metadata` and Private Metadata Usage
+### 28. `set_private_metadata` and Private Metadata Usage
 
 ```python
 def set_private_metadata(self, key: str, value: Any) -> None:

@@ -1,4 +1,4 @@
-from src.captivate_ai_api.Captivate import ActionModel, Captivate, FileCollectionModel,CardCollectionModel,CardMessageModel, FileModel, HtmlMessageModel, TableMessageModel, TextMessageModel,ButtonMessageModel, CaptivateResponseModel
+from src.captivate_ai_api.Captivate import ActionModel, Captivate, FileCollectionModel,CardCollectionModel,CardMessageModel, FileModel, HtmlMessageModel, TableMessageModel, TextMessageModel,ButtonMessageModel, CaptivateResponseModel, ChatRequest
 import asyncio
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -45,12 +45,7 @@ data_action = {
     "hasLivechat": False,
 }
 
-class ChatRequest(BaseModel):
-    session_id: str
-    user_input: Optional[str] = None
-    incoming_action: Optional[List[Dict[str, Any]]] = None
-    metadata: Dict[str, Any]
-    hasLivechat: bool = False
+
 
 @app.post("/chat", response_model=CaptivateResponseModel)
 async def chat(request: ChatRequest):
@@ -58,8 +53,11 @@ async def chat(request: ChatRequest):
     Chat endpoint for Captivate AI API
     """
     try:
-        # Create Captivate instance
-        captivate_instance = Captivate(**request.model_dump())
+        # Create Captivate instance using factory method
+        captivate_instance = Captivate.create(request)
+        
+        # Alternative approach for backward compatibility:
+        # captivate_instance = Captivate(**request.model_dump())     # Direct constructor
        
         # Create a simple text message
         messages = [TextMessageModel(text="""Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
