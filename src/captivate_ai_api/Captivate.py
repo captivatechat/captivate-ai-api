@@ -14,6 +14,15 @@ def requires_router_mode(func):
         return func(self, *args, **kwargs)
     return wrapper
 
+# Request model for chat API
+class ChatRequest(BaseModel):
+    session_id: str
+    user_input: Optional[str] = None
+    files: Optional[List[Dict[str, Any]]] = None
+    incoming_action: Optional[List[Dict[str, Any]]] = None
+    metadata: Dict[str, Any]
+    hasLivechat: bool = False
+
 # Predefined message types
 class TextMessageModel(BaseModel):
     type: str = "text"
@@ -539,6 +548,33 @@ class Captivate(BaseModel):
         Returns the value of 'user_input' from the Captivate instance.
         """
         return self.user_input
+
+    @classmethod
+    def create(cls, data: Union[ChatRequest, Dict[str, Any]]) -> "Captivate":
+        """
+        Factory method to create a Captivate instance from various input types.
+        
+        Args:
+            data: Either a ChatRequest instance or a dictionary containing the data
+            
+        Returns:
+            Captivate: A new Captivate instance
+            
+        Examples:
+            # From ChatRequest
+            chat_request = ChatRequest(session_id="123", ...)
+            captivate = Captivate.create(chat_request)
+            
+            # From dictionary
+            data = {"session_id": "123", ...}
+            captivate = Captivate.create(data)
+        """
+        if isinstance(data, ChatRequest):
+            return cls(**data.model_dump())
+        elif isinstance(data, dict):
+            return cls(**data)
+        else:
+            raise ValueError(f"Unsupported data type: {type(data)}. Expected ChatRequest or dict.")
     
     async def async_send_message_v1(self, environment: str = "dev") -> Dict[str, Any]: #DEPRECATED WILL NOT BE MAINTAINED
         """
