@@ -1,7 +1,6 @@
 import httpx
 from pydantic import BaseModel, EmailStr, model_validator, Field, RootModel
 from typing import Optional, Dict, Any, List, Union
-import requests
 import io
 from functools import wraps
 
@@ -685,8 +684,9 @@ class Captivate(BaseModel):
         if "url" not in file_info:
             raise ValueError("Missing 'url' key in file_info dictionary.")
 
-        response = requests.get(file_info["url"], stream=True)
-        response.raise_for_status()  # Raise an error for failed requests
+        async with httpx.AsyncClient() as client:
+            response = await client.get(file_info["url"])
+            response.raise_for_status()  # Raise an error for failed requests
 
         return io.BytesIO(response.content)  # Store the file in-memory
 

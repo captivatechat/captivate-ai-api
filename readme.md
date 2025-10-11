@@ -18,6 +18,9 @@ This API is developed by CaptivateChat to handle its API formats.This flexible m
 - Flexible message type support
 - Custom metadata manipulation
 - Conversation title management
+- **File handling with text extraction and storage management**
+- **Router mode with protected methods**
+- **Agent escalation and routing capabilities**
 
 You can install through:
 
@@ -35,6 +38,29 @@ Here's the JSON payload you will send in the POST request:
     "session_id": "lance_catcher_test_69c35e3e-7ff4-484e-8e36-792a62567b79",
     "endpoint": "action",
     "user_input": "hi man",
+    "files": [
+        {
+            "filename": "document.pdf",
+            "type": "application/pdf",
+            "file": {},
+            "textContent": {
+                "type": "file_content",
+                "text": "Extracted text content from the PDF...",
+                "metadata": {
+                    "source": "file_attachment",
+                    "originalFileName": "document.pdf",
+                    "storageType": "direct"
+                }
+            },
+            "storage": {
+                "fileKey": "uploads/1704067200000-abc123-document.pdf",
+                "presignedUrl": "https://s3.amazonaws.com/bucket/uploads/1704067200000-abc123-document.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=...",
+                "expiresIn": 1704070800,
+                "fileSize": 1024000,
+                "processingTime": 15
+            }
+        }
+    ],
     "incoming_action": [
         {
             "id": "sendEmail",
@@ -79,6 +105,7 @@ The API now has a cleaner structure with a dedicated `ChatRequest` model:
 2. **`Captivate`**: Handles both request processing and response management
 
 This makes the API more intuitive and easier to use.
+
 
 ## Usage Example
 
@@ -130,6 +157,136 @@ captivate = Captivate.create(data)
 
 # Backward compatibility - this still works:
 captivate = Captivate(**chat_request.model_dump())     # Direct constructor
+```
+
+## File Handling
+
+The Python library receives files from the frontend (JavaScript SDK) in a comprehensive format and processes them accordingly.
+
+### File Structure (Received from Frontend)
+
+The frontend sends files with this structure:
+
+```json
+{
+    "filename": "document.pdf",
+    "type": "application/pdf",
+    "file": {},
+    "textContent": {
+        "type": "file_content",
+        "text": "Extracted text content from the PDF...",
+        "metadata": {
+            "source": "file_attachment",
+            "originalFileName": "document.pdf",
+            "storageType": "direct"
+        }
+    },
+    "storage": {
+        "fileKey": "uploads/1704067200000-abc123-document.pdf",
+        "presignedUrl": "https://s3.amazonaws.com/bucket/uploads/1704067200000-abc123-document.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=...",
+        "expiresIn": 1704070800,
+        "fileSize": 1024000,
+        "processingTime": 15
+    }
+}
+```
+
+**Note**: This is the format sent by the Captivate Chat API JavaScript SDK. The Python library receives and processes this complete structure.
+
+### File Processing Example
+
+```python
+from captivate_ai_api import ChatRequest, Captivate, TextMessageModel
+
+# Create a chat request with files (as received from frontend)
+chat_request = ChatRequest(
+    session_id="file_session_123",
+    user_input="Please analyze these documents",
+    files=[
+        {
+            "filename": "report.pdf",
+            "type": "application/pdf",
+            "file": {},
+            "textContent": {
+                "type": "file_content",
+                "text": "Q1 2024 Financial Report\n\nRevenue: $1.2M\nExpenses: $800K\nNet Profit: $400K",
+                "metadata": {
+                    "source": "file_attachment",
+                    "originalFileName": "report.pdf",
+                    "storageType": "direct"
+                }
+            },
+            "storage": {
+                "fileKey": "uploads/1704067200000-abc123-report.pdf",
+                "presignedUrl": "https://s3.amazonaws.com/bucket/uploads/1704067200000-abc123-report.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=...",
+                "expiresIn": 1704070800,
+                "fileSize": 2048000,
+                "processingTime": 25
+            }
+        }
+    ],
+    metadata={
+        "internal": {
+            "channelMetadata": {
+                "channelMetadata": {"channel": "web"},
+                "custom": {"mode": "assistant"}
+            }
+        }
+    },
+    hasLivechat=False
+)
+
+# Create Captivate instance
+captivate = Captivate.create(chat_request)
+
+# Access file information
+files = captivate.get_files()
+for file in files:
+    print(f"File: {file.get('filename')}")
+    print(f"Type: {file.get('type')}")
+    print(f"Size: {file.get('storage', {}).get('fileSize')} bytes")
+    print(f"Text: {file.get('textContent', {}).get('text', '')[:100]}...")
+
+# Set response with file analysis
+captivate.set_response([
+    TextMessageModel(text=f"I've analyzed {len(files)} file(s) and found relevant information.")
+])
+
+# Get the response
+response = captivate.get_response()
+```
+
+### File Access Methods
+
+```python
+# Get all files
+files = captivate.get_files()
+
+# Access individual file properties
+for file in files:
+    filename = file.get('filename')
+    file_type = file.get('type')
+    file_size = file.get('storage', {}).get('fileSize')
+    text_content = file.get('textContent', {}).get('text')
+    storage_url = file.get('storage', {}).get('presignedUrl')
+    
+    print(f"Processing {filename} ({file_type}, {file_size} bytes)")
+    if text_content:
+        print(f"Content preview: {text_content[:100]}...")
+    if storage_url:
+        print(f"Storage URL: {storage_url}")
+```
+
+### Download Files to Memory
+
+```python
+# Download a file to memory for processing
+file_info = files[0]  # Get first file
+file_stream = await captivate.download_file_to_memory(file_info)
+
+# Process the file stream
+content = file_stream.read()
+print(f"Downloaded {len(content)} bytes")
 ```
 
 ### Legacy usage (still supported):
@@ -324,7 +481,28 @@ def get_user_input(self) -> Optional[str]:
 user_input = captivate_instance.get_user_input()
 ```
 
-### 4. `set_conversation_title`
+### 4. `get_files`
+
+```python
+def get_files(self) -> Optional[List[Dict[str, Any]]]:
+```
+- **Description**: Returns the list of files attached to the conversation with complete file information including text content and storage details.
+- **Returns**: `Optional[List[Dict[str, Any]]]` - List of file objects with comprehensive metadata from the frontend
+- **Example**: 
+```python
+files = captivate_instance.get_files()
+if files:
+    for file in files:
+        filename = file.get('filename')
+        file_type = file.get('type')
+        file_size = file.get('storage', {}).get('fileSize')
+        text_content = file.get('textContent', {}).get('text')
+        print(f"File: {filename} ({file_type}, {file_size} bytes)")
+        if text_content:
+            print(f"Content: {text_content[:100]}...")
+```
+
+### 5. `set_conversation_title`
 
 ```python
 def set_conversation_title(self, title: str):
@@ -335,7 +513,7 @@ def set_conversation_title(self, title: str):
 captivate_instance.set_conversation_title("New Conversation Title")
 ```
 
-### 5. `get_conversation_title`
+### 6. `get_conversation_title`
 
 ```python
 def get_conversation_title(self) -> Optional[str]:
@@ -346,7 +524,7 @@ def get_conversation_title(self) -> Optional[str]:
 conversation_title = captivate_instance.get_conversation_title()
 ```
 
-### 6. `set_metadata`
+### 7. `set_metadata`
 
 ```python
 def set_metadata(self, key: str, value: Any):
@@ -357,7 +535,7 @@ def set_metadata(self, key: str, value: Any):
 captivate_instance.set_metadata("custom_key", "custom_value")
 ```
 
-### 7. `get_metadata`
+### 8. `get_metadata`
 
 ```python
 def get_metadata(self, key: str) -> Optional[Any]:
@@ -368,7 +546,7 @@ def get_metadata(self, key: str) -> Optional[Any]:
 metadata_value = captivate_instance.get_metadata("custom_key")
 ```
 
-### 8. `remove_metadata`
+### 9. `remove_metadata`
 
 ```python
 def remove_metadata(self, key: str) -> bool:
@@ -379,7 +557,7 @@ def remove_metadata(self, key: str) -> bool:
 captivate_instance.remove_metadata("custom_key")
 ```
 
-### 9. `get_channel`
+### 10. `get_channel`
 
 ```python
 def get_channel(self) -> Optional[str]:
@@ -390,7 +568,7 @@ def get_channel(self) -> Optional[str]:
 channel = captivate_instance.get_channel()
 ```
 
-### 10. `get_user`
+### 11. `get_user`
 
 ```python
 def get_user(self) -> Optional[UserModel]:
@@ -401,7 +579,7 @@ def get_user(self) -> Optional[UserModel]:
 user = captivate_instance.get_user()
 ```
 
-### 11. `set_user`
+### 12. `set_user`
 
 ```python
 def set_user(self, user: UserModel) -> None:
@@ -412,7 +590,7 @@ def set_user(self, user: UserModel) -> None:
 captivate_instance.set_user(UserModel(firstName="John", lastName="Doe"))
 ```
 
-### 12. `get_created_at`
+### 13. `get_created_at`
 
 ```python
 def get_created_at(self) -> Optional[str]:
@@ -423,7 +601,7 @@ def get_created_at(self) -> Optional[str]:
 created_at = captivate_instance.get_created_at()
 ```
 
-### 13. `get_updated_at`
+### 14. `get_updated_at`
 
 ```python
 def get_updated_at(self) -> Optional[str]:
@@ -434,7 +612,7 @@ def get_updated_at(self) -> Optional[str]:
 updated_at = captivate_instance.get_updated_at()
 ```
 
-### 14. `get_has_livechat`
+### 15. `get_has_livechat`
 
 ```python
 def get_has_livechat(self) -> bool:
@@ -445,7 +623,7 @@ def get_has_livechat(self) -> bool:
 has_livechat = captivate_instance.get_has_livechat()
 ```
 
-### 15. `set_response`
+### 16. `set_response`
 
 ```python
 def set_response(self, response: List[Union[TextMessageModel, FileCollectionModel, ButtonMessageModel, TableMessageModel, CardCollectionModel, HtmlMessageModel, dict]]) -> None:
@@ -469,7 +647,7 @@ captivate_instance.set_response([
             ])
 ```
 
-### 16. `get_incoming_action`
+### 17. `get_incoming_action`
 
 ```python
 def get_incoming_action(self) -> Optional[List[ActionModel]]:
@@ -480,7 +658,7 @@ def get_incoming_action(self) -> Optional[List[ActionModel]]:
 incoming_actions = captivate_instance.get_incoming_action()
 ```
 
-### 17. `set_outgoing_action`
+### 18. `set_outgoing_action`
 
 ```python
 def set_outgoing_action(self, actions: List[ActionModel]) -> None:
@@ -493,7 +671,7 @@ captivate_instance.set_outgoing_action([
 ])
 ```
 
-### 18. `get_response`
+### 19. `get_response`
 
 ```python
 def get_response(self) -> Optional[str]:

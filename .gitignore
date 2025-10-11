@@ -8,5 +8,6 @@ build/
 *.egg-info/
 CaptivateMemory.py
 mredis.py
-main
+main.py
 how_to_update_library.md
+test.py
