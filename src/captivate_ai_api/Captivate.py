@@ -2,6 +2,7 @@ import httpx
 from pydantic import BaseModel, EmailStr, model_validator, Field, RootModel
 from typing import Optional, Dict, Any, List, Union
 import io
+import json
 from functools import wraps
 
 def requires_router_mode(func):
@@ -78,6 +79,34 @@ class UserModel(BaseModel):
     email: Optional[str] = None
 
 
+def _validate_json_serializable(key: str, value: Any) -> None:
+    """
+    Validates that both key and value can be JSON serialized.
+    
+    Args:
+        key: The key to validate
+        value: The value to validate
+        
+    Raises:
+        ValueError: If key or value cannot be JSON serialized
+    """
+    # Validate key can be JSON serialized (keys must be strings in JSON)
+    if not isinstance(key, str):
+        raise ValueError(f"Key must be a string, got {type(key).__name__}")
+    
+    # Try to serialize the key as a JSON string key
+    try:
+        json.dumps({key: "test"})
+    except (TypeError, ValueError) as e:
+        raise ValueError(f"Key '{key}' cannot be JSON serialized: {str(e)}")
+    
+    # Validate value can be JSON serialized
+    try:
+        json.dumps(value)
+    except (TypeError, ValueError) as e:
+        raise ValueError(f"Value for key '{key}' cannot be JSON serialized: {str(e)}")
+
+
 class ChannelMetadataModel(BaseModel):
     user: Optional[UserModel] = None
     channelMetadata: Dict[str, Any] = {} # This will allow dynamic properties at this level
@@ -92,12 +121,17 @@ class ChannelMetadataModel(BaseModel):
         Set or update a key-value pair in the custom object.
         'private', 'title', and 'conversation_title' are reserved keys and cannot be set directly.
         Prevents duplicate keys between custom and private.
+        Validates that both key and value can be JSON serialized.
         """
         reserved = {'private', 'title', 'conversation_title'}
         if key in reserved:
             raise ValueError(f"'{key}' is a reserved key and cannot be set directly. Use the appropriate setter method instead.")
         if key in self.private:
             raise ValueError(f"Key '{key}' already exists in private metadata. Remove it from private before setting in custom.")
+        
+        # Validate JSON serializability
+        _validate_json_serializable(key, value)
+        
         self.custom[key] = value
 
     def get_custom(self, key: str) -> Optional[Any]:
@@ -173,9 +207,14 @@ class ChannelMetadataModel(BaseModel):
         """
         Set or update a key-value pair in the private object, creating it if necessary.
         Prevents duplicate keys between custom and private.
+        Validates that both key and value can be JSON serialized.
         """
         if key in self.custom:
             raise ValueError(f"Key '{key}' already exists in public metadata. Remove it from custom before setting in private.")
+        
+        # Validate JSON serializability
+        _validate_json_serializable(key, value)
+        
         self.private[key] = value
 
     def get_private_metadata(self, key: str) -> Optional[Any]:
