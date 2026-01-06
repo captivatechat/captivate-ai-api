@@ -82,6 +82,8 @@ class UserModel(BaseModel):
 def _validate_json_serializable(key: str, value: Any) -> None:
     """
     Validates that both key and value can be JSON serialized.
+    Rejects keys starting with '$' as they are often used for special operators
+    (e.g., MongoDB operators like $gt, $lt) and can cause issues in JSON decoding.
     
     Args:
         key: The key to validate
@@ -93,6 +95,11 @@ def _validate_json_serializable(key: str, value: Any) -> None:
     # Validate key can be JSON serialized (keys must be strings in JSON)
     if not isinstance(key, str):
         raise ValueError(f"Key must be a string, got {type(key).__name__}")
+    
+    # Reject keys starting with '$' as they can cause issues with JSON decoding
+    # and are often used for special operators (MongoDB, JSONPath, etc.)
+    if key.startswith('$'):
+        raise ValueError(f"Key '{key}' cannot start with '$' as it may cause issues with JSON decoding. Keys starting with '$' are reserved for special operators.")
     
     # Try to serialize the key as a JSON string key
     try:
